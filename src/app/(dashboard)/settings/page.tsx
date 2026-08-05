@@ -2,21 +2,30 @@ import { db } from "@/lib/db";
 import { getBusinessId, requireSession } from "@/lib/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings } from "lucide-react";
+import { Settings, Users } from "lucide-react";
+import { InviteAccountantForm } from "@/components/settings/invite-form";
 
 export default async function SettingsPage() {
   const session = await requireSession();
   const businessId = await getBusinessId();
 
-  const business = await db.business.findUnique({
-    where: { id: businessId },
-  });
+  const [business, members, invites] = await Promise.all([
+    db.business.findUnique({ where: { id: businessId } }),
+    db.businessMember.findMany({
+      where: { businessId },
+      include: { user: true },
+    }),
+    db.businessInvite.findMany({
+      where: { businessId },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500">Business configuration and account details</p>
+        <p className="text-slate-500">Business configuration and team access</p>
       </div>
 
       <Card>
@@ -41,20 +50,54 @@ export default async function SettingsPage() {
               <p className="font-medium text-slate-900">{business?.balanceDate ?? "—"}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-500">Financial Year Start</p>
-              <p className="font-medium text-slate-900">{business?.financialYearStart ?? "—"}</p>
-            </div>
-            <div>
               <p className="text-sm text-slate-500">GST Filing Frequency</p>
-              <p className="font-medium text-slate-900 capitalize">
+              <p className="font-medium capitalize text-slate-900">
                 {business?.gstFilingFrequency?.replace("_", " ") ?? "—"}
               </p>
             </div>
           </div>
-          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
-            Business settings editing is a placeholder in this demo. Connect to Xero or MYOB for
-            full configuration in production.
-          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-emerald-600" />
+            Team Members
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul className="divide-y divide-slate-100">
+            {members.map((m) => (
+              <li key={m.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="font-medium text-slate-900">{m.user.name}</p>
+                  <p className="text-sm text-slate-500">{m.user.email}</p>
+                </div>
+                <Badge variant="default">{m.role}</Badge>
+              </li>
+            ))}
+          </ul>
+
+          {invites.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Pending invites</p>
+              <ul className="space-y-1 text-sm text-slate-500">
+                {invites.map((inv) => (
+                  <li key={inv.id}>
+                    {inv.email} — expires {inv.expiresAt.toLocaleDateString("en-NZ")}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {session.user.role === "owner" && (
+            <div className="border-t border-slate-100 pt-4">
+              <p className="mb-3 text-sm font-medium text-slate-700">Invite accountant</p>
+              <InviteAccountantForm />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -62,7 +105,7 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>Your Account</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-slate-900">{session.user.name}</p>

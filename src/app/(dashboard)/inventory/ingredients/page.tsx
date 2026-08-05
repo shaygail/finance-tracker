@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QrDisplay } from "@/components/inventory/qr-display";
 import { StockCountForm } from "@/components/inventory/stock-count-form";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default async function IngredientsPage() {
   const businessId = await getBusinessId();
@@ -16,9 +18,17 @@ export default async function IngredientsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ingredients</h1>
-        <p className="text-slate-500">{ingredients.length} items with QR codes for stock counts</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Ingredients</h1>
+          <p className="text-slate-500">{ingredients.length} items with QR codes for stock counts</p>
+        </div>
+        <Link href="/inventory/ingredients/print">
+          <Button variant="outline">
+            <Printer className="mr-2 h-4 w-4" />
+            Print QR labels
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

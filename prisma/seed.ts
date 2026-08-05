@@ -4,28 +4,22 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { calculateGstFromInc } from "../src/lib/gst/nz";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
-const db = new PrismaClient({ adapter });
+function createSeedClient() {
+  const url = process.env.DATABASE_URL ?? "file:./dev.db";
+  if (url.startsWith("postgres")) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaPg } = require("@prisma/adapter-pg");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Pool } = require("pg");
+    const pool = new Pool({ connectionString: url });
+    return new PrismaClient({ adapter: new PrismaPg(pool) });
+  }
+  return new PrismaClient({
+    adapter: new PrismaBetterSqlite3({ url }),
+  });
+}
 
-const VENDORS = [
-  "Pak'nSave",
-  "Countdown",
-  "OfficeMax",
-  "Spark",
-  "Trade Me",
-  "Bunnings",
-  "Mitre 10",
-  "Z Energy",
-  "BP",
-  "Air New Zealand",
-  "Xero",
-  "NZ Post",
-  "The Warehouse",
-  "Noel Leeming",
-  "PB Tech",
-];
+const db = createSeedClient();
 
 const CATEGORIES = [
   { name: "Supplies", slug: "supplies", type: "expense" },
@@ -36,30 +30,33 @@ const CATEGORIES = [
 ];
 
 const INGREDIENTS = [
-  { name: "Flour", unit: "kg", parLevel: 20, currentStock: 15, qrCode: "ING-FLOUR-001" },
-  { name: "Sugar", unit: "kg", parLevel: 15, currentStock: 8, qrCode: "ING-SUGAR-002" },
-  { name: "Butter", unit: "kg", parLevel: 10, currentStock: 3, qrCode: "ING-BUTTER-003" },
-  { name: "Eggs", unit: "dozen", parLevel: 12, currentStock: 6, qrCode: "ING-EGGS-004" },
-  { name: "Milk", unit: "L", parLevel: 20, currentStock: 18, qrCode: "ING-MILK-005" },
-  { name: "Vanilla Extract", unit: "ml", parLevel: 500, currentStock: 200, qrCode: "ING-VANILLA-006" },
-  { name: "Cocoa Powder", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "ING-COCOA-007" },
-  { name: "Baking Powder", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "ING-BPOWDER-008" },
+  { name: "Matcha (Thea)", unit: "g", parLevel: 500, currentStock: 180, qrCode: "ING-MATCHA-001" },
+  { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "ING-CREAM-002" },
+  { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "ING-OAT-003" },
+  { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "ING-UBE-004" },
+  { name: "Condensed Milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "ING-COND-005" },
+  { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "ING-COCO-006" },
+  { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "ING-BEANS-007" },
+  { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "ING-CUPS-008" },
+  { name: "Biscoff Spread", unit: "kg", parLevel: 2, currentStock: 0.8, qrCode: "ING-BISC-009" },
+  { name: "Frozen Strawberries", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "ING-STRAW-010" },
 ];
 
 const PRODUCTS = [
-  { name: "Sourdough Loaf", sku: "PROD-001", unitsSold: 245, revenue: 3675, cogs: 1225 },
-  { name: "Chocolate Croissant", sku: "PROD-002", unitsSold: 189, revenue: 945, cogs: 378 },
-  { name: "Blueberry Muffin", sku: "PROD-003", unitsSold: 156, revenue: 780, cogs: 312 },
-  { name: "Flat White", sku: "PROD-004", unitsSold: 420, revenue: 2100, cogs: 630 },
-  { name: "Banana Bread", sku: "PROD-005", unitsSold: 98, revenue: 686, cogs: 245 },
+  { name: "Matcha Latte", sku: "DRINK-001", unitsSold: 320, revenue: 2560, cogs: 890 },
+  { name: "Ube Latte", sku: "DRINK-002", unitsSold: 245, revenue: 1960, cogs: 720 },
+  { name: "Flat White", sku: "DRINK-003", unitsSold: 420, revenue: 2100, cogs: 630 },
+  { name: "Cold Brew", sku: "DRINK-004", unitsSold: 189, revenue: 1323, cogs: 380 },
+  { name: "Biscoff Latte", sku: "DRINK-005", unitsSold: 156, revenue: 1248, cogs: 410 },
 ];
 
 const RULES = [
-  { pattern: "pak", categorySlug: "cos" },
-  { pattern: "countdown", categorySlug: "cos" },
-  { pattern: "bunnings", categorySlug: "equipment-tools" },
-  { pattern: "mitre 10", categorySlug: "equipment-tools" },
-  { pattern: "officemax", categorySlug: "supplies" },
+  { pattern: "anchor", categorySlug: "cos" },
+  { pattern: "otis", categorySlug: "cos" },
+  { pattern: "matcha", categorySlug: "cos" },
+  { pattern: "cup", categorySlug: "supplies" },
+  { pattern: "breville", categorySlug: "equipment-tools" },
+  { pattern: "registration", categorySlug: "non-operating" },
 ];
 
 async function main() {
@@ -71,6 +68,7 @@ async function main() {
   await db.importBatch.deleteMany();
   await db.invoice.deleteMany();
   await db.savingsGoal.deleteMany();
+  await db.businessInvite.deleteMany();
   await db.product.deleteMany();
   await db.ingredient.deleteMany();
   await db.category.deleteMany();
@@ -98,7 +96,7 @@ async function main() {
 
   const business = await db.business.create({
     data: {
-      name: "Kiwi Bakery Ltd",
+      name: "Kiwi Café Ltd",
       gstNumber: "123-456-789",
       balanceDate: "03-31",
       gstFilingFrequency: "two_monthly",
@@ -144,32 +142,34 @@ async function main() {
     });
   }
 
-  const paymentModes = ["Cash", "EFTPOS", "Credit Card", "Bank Transfer", "Online"];
+  const samplePurchases = [
+    { vendor: "Pak'nSave", amount: 45.5, category: "cos", daysAgo: 5 },
+    { vendor: "Bidfood — Cups 500ml", amount: 32.37, category: "supplies", daysAgo: 12 },
+    { vendor: "Matcha (Thea)", amount: 120, category: "cos", daysAgo: 20 },
+    { vendor: "Breville Barista Express", amount: 629, category: "equipment-tools", daysAgo: 45 },
+    { vendor: "Food business Registration", amount: 366, category: "non-operating", daysAgo: 60 },
+  ];
 
-  for (let i = 0; i < 30; i++) {
-    const vendor = VENDORS[i % VENDORS.length];
-    const daysAgo = Math.floor(Math.random() * 120);
+  for (let i = 0; i < 25; i++) {
+    const sample = samplePurchases[i % samplePurchases.length];
     const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
+    date.setDate(date.getDate() - sample.daysAgo - i);
 
-    const unitAmount = Math.round((Math.random() * 200 + 10) * 100) / 100;
-    const quantity = Math.floor(Math.random() * 5) + 1;
-    const totalAmount = Math.round(unitAmount * quantity * 100) / 100;
+    const unitAmount = sample.amount;
+    const quantity = 1;
+    const totalAmount = unitAmount;
     const gst = calculateGstFromInc(totalAmount);
-
-    const rule = RULES.find((r) => vendor.toLowerCase().includes(r.pattern));
-    const categoryId = rule ? categories[rule.categorySlug] : categories["cos"];
 
     await db.transaction.create({
       data: {
         businessId: business.id,
-        categoryId,
+        categoryId: categories[sample.category],
         date,
-        vendor,
+        vendor: sample.vendor,
         unitAmount,
         quantity,
         totalAmount,
-        paymentMode: paymentModes[i % paymentModes.length],
+        paymentMode: i % 2 === 0 ? "Card" : "Cash",
         amountExGst: gst.amountExGst,
         gstAmount: gst.gstAmount,
         amountIncGst: gst.amountIncGst,
@@ -180,20 +180,24 @@ async function main() {
     });
   }
 
+  const totalRevenue = PRODUCTS.reduce((s, p) => s + p.revenue, 0);
+  const totalExpenses = 25 * 120;
+  const surplus = totalRevenue - totalExpenses;
+
   await db.savingsGoal.createMany({
     data: [
       {
         businessId: business.id,
         name: "New Commercial Oven",
         targetAmount: 15000,
-        currentAmount: 8500,
+        currentAmount: Math.min(surplus * 0.6, 15000),
         deadline: new Date("2026-06-30"),
       },
       {
         businessId: business.id,
         name: "Emergency Fund",
         targetAmount: 10000,
-        currentAmount: 4200,
+        currentAmount: Math.min(surplus * 0.4, 10000),
         deadline: new Date("2026-03-31"),
       },
     ],
@@ -202,47 +206,74 @@ async function main() {
   const mockInvoices = [
     {
       externalId: "gmail-msg-001",
-      subject: "Invoice #INV-2025-001 from Pak'nSave",
-      fromEmail: "invoices@paknsave.co.nz",
-      receivedAt: new Date("2025-07-15T09:30:00Z"),
+      subject: "Invoice #INV-2026-001 from Bidfood",
+      fromEmail: "invoices@bidfood.co.nz",
+      receivedAt: new Date("2026-02-15T09:30:00Z"),
       amount: 342.5,
-      vendor: "Pak'nSave",
+      vendor: "Bidfood",
       status: "unmatched",
     },
     {
       externalId: "gmail-msg-002",
-      subject: "Your Countdown receipt - Order #CD789012",
-      fromEmail: "receipts@countdown.co.nz",
-      receivedAt: new Date("2025-07-22T14:15:00Z"),
+      subject: "Your Pak'nSave receipt",
+      fromEmail: "receipts@paknsave.co.nz",
+      receivedAt: new Date("2026-02-22T14:15:00Z"),
       amount: 128.9,
-      vendor: "Countdown",
+      vendor: "Pak'nSave",
       status: "unmatched",
     },
     {
       externalId: "gmail-msg-003",
-      subject: "Invoice from OfficeMax NZ",
-      fromEmail: "billing@officemax.co.nz",
-      receivedAt: new Date("2025-08-01T11:00:00Z"),
+      subject: "Invoice from Huhtamaki NZ",
+      fromEmail: "billing@huhtamaki.com",
+      receivedAt: new Date("2026-03-01T11:00:00Z"),
       amount: 89.99,
-      vendor: "OfficeMax",
+      vendor: "Huhtamaki",
       status: "matched",
     },
     {
       externalId: "gmail-msg-004",
-      subject: "Spark Business - Monthly Statement",
-      fromEmail: "billing@spark.co.nz",
-      receivedAt: new Date("2025-08-03T08:45:00Z"),
-      amount: 156.0,
-      vendor: "Spark",
+      subject: "Thea Matcha — Wholesale Invoice",
+      fromEmail: "orders@theamatcha.co.nz",
+      receivedAt: new Date("2026-03-03T08:45:00Z"),
+      amount: 480.0,
+      vendor: "Thea Matcha",
       status: "unmatched",
     },
     {
       externalId: "gmail-msg-005",
-      subject: "Trade Me Seller Invoice #TM445566",
-      fromEmail: "noreply@trademe.co.nz",
-      receivedAt: new Date("2025-08-04T16:20:00Z"),
+      subject: "Milklab — Direct Debit Statement",
+      fromEmail: "billing@milklab.com",
+      receivedAt: new Date("2026-03-04T16:20:00Z"),
+      amount: 156.0,
+      vendor: "Milklab",
+      status: "unmatched",
+    },
+    {
+      externalId: "gmail-msg-006",
+      subject: "Countdown Business — Monthly Statement",
+      fromEmail: "business@countdown.co.nz",
+      receivedAt: new Date("2026-03-10T10:00:00Z"),
       amount: 245.0,
-      vendor: "Trade Me Seller",
+      vendor: "Countdown",
+      status: "unmatched",
+    },
+    {
+      externalId: "gmail-msg-007",
+      subject: "Biopak — Tax Invoice #BP8821",
+      fromEmail: "accounts@biopak.com",
+      receivedAt: new Date("2026-03-12T13:30:00Z"),
+      amount: 67.5,
+      vendor: "Biopak",
+      status: "unmatched",
+    },
+    {
+      externalId: "gmail-msg-008",
+      subject: "Spark Business — Monthly Bill",
+      fromEmail: "billing@spark.co.nz",
+      receivedAt: new Date("2026-03-15T08:00:00Z"),
+      amount: 89.0,
+      vendor: "Spark",
       status: "unmatched",
     },
   ];

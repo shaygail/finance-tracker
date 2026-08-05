@@ -34,6 +34,7 @@ model Business {
   importBatches       ImportBatch[]
   savingsGoals        SavingsGoal[]
   categorisationRules CategorisationRule[]
+  invites             BusinessInvite[]
 }
 
 model BusinessMember {
@@ -159,4 +160,17 @@ model CategorisationRule {
   categoryId String
   ruleType   String   @default("vendor")
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model BusinessInvite {
+  id         String   @id @default(cuid())
+  businessId String
+  email      String
+  role       String   @default("accountant")
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, email])
 }

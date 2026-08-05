@@ -5,6 +5,7 @@ import { getBusinessId } from "@/lib/session";
 import { parseSpreadsheetBuffer } from "@/lib/excel/parser";
 import { calculateGstFromInc } from "@/lib/gst/nz";
 import { suggestCategory } from "@/lib/categorisation";
+import { syncGoalsFromSurplus } from "@/lib/surplus";
 import { revalidatePath } from "next/cache";
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
@@ -102,9 +103,12 @@ export async function importTransactions(formData: FormData) {
     },
   });
 
+  await syncGoalsFromSurplus(businessId);
+
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/import");
+  revalidatePath("/goals");
 
   return {
     error: null,

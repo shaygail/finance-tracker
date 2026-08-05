@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
 import { calculateGstFromInc } from "@/lib/gst/nz";
 import { suggestCategory } from "@/lib/categorisation";
+import { syncGoalsFromSurplus } from "@/lib/surplus";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -53,7 +54,10 @@ export async function createTransaction(formData: FormData): Promise<void> {
     },
   });
 
+  await syncGoalsFromSurplus(businessId);
+
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
+  revalidatePath("/goals");
   redirect("/transactions");
 }
