@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String
+  passwordHash  String
+  createdAt     DateTime         @default(now())
+  memberships   BusinessMember[]
+  stockCounts   StockCount[]
+}
+
+model Business {
+  id                  String              @id @default(cuid())
+  name                String
+  gstNumber           String?
+  balanceDate         String              @default("03-31")
+  gstFilingFrequency  String              @default("two_monthly")
+  financialYearStart  String              @default("04-01")
+  createdAt           DateTime            @default(now())
+  members             BusinessMember[]
+  categories          Category[]
+  transactions        Transaction[]
+  ingredients         Ingredient[]
+  products            Product[]
+  invoices            Invoice[]
+  importBatches       ImportBatch[]
+  savingsGoals        SavingsGoal[]
+  categorisationRules CategorisationRule[]
+}
+
+model BusinessMember {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  role       String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([userId, businessId])
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  businessId   String
+  name         String
+  slug         String
+  type         String        @default("expense")
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  @@unique([businessId, slug])
+}
+
+model Transaction {
+  id           String      @id @default(cuid())
+  businessId   String
+  categoryId   String?
+  ingredientId String?
+  date         DateTime
+  vendor       String
+  unitAmount   Float
+  quantity     Float       @default(1)
+  totalAmount  Float
+  paymentMode  String
+  amountExGst  Float
+  gstAmount    Float
+  amountIncGst Float
+  gstType      String      @default("standard_15")
+  type         String      @default("expense")
+  source       String      @default("manual")
+  notes        String?
+  createdAt    DateTime    @default(now())
+  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category     Category?   @relation(fields: [categoryId], references: [id])
+  ingredient   Ingredient? @relation(fields: [ingredientId], references: [id])
+}
+
+model Ingredient {
+  id           String        @id @default(cuid())
+  businessId   String
+  name         String
+  unit         String
+  parLevel     Float         @default(0)
+  currentStock Float         @default(0)
+  qrCode       String        @unique
+  createdAt    DateTime      @default(now())
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  stockCounts  StockCount[]
+  transactions Transaction[]
+}
+
+model StockCount {
+  id           String     @id @default(cuid())
+  ingredientId String
+  quantity     Float
+  countedAt    DateTime   @default(now())
+  countedById  String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  countedBy    User       @relation(fields: [countedById], references: [id])
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  sku        String?
+  unitsSold  Float    @default(0)
+  revenue    Float    @default(0)
+  cogs       Float    @default(0)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, name])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  businessId    String
+  externalId    String
+  subject       String
+  fromEmail     String
+  receivedAt    DateTime
+  amount        Float?
+  vendor        String?
+  status        String   @default("unmatched")
+  attachmentUrl String?
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  @@unique([businessId, externalId])
+}
+
+model ImportBatch {
+  id         String   @id @default(cuid())
+  businessId String
+  filename   String
+  rowCount   Int
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model SavingsGoal {
+  id            String    @id @default(cuid())
+  businessId    String
+  name          String
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  deadline      DateTime?
+  createdAt     DateTime  @default(now())
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model CategorisationRule {
+  id         String   @id @default(cuid())
+  businessId String
+  pattern    String
+  categoryId String
+  ruleType   String   @default("vendor")
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "externalId": "gmail-msg-001",
+    "subject": "Invoice #INV-2025-001 from Pak'nSave",
+    "fromEmail": "invoices@paknsave.co.nz",
+    "receivedAt": "2025-07-15T09:30:00Z",
+    "amount": 342.50,
+    "vendor": "Pak'nSave",
+    "status": "unmatched",
+    "attachmentUrl": "/demo/invoices/paknsave-jul.pdf"
+  },
+  {
+    "externalId": "gmail-msg-002",
+    "subject": "Your Countdown receipt - Order #CD789012",
+    "fromEmail": "receipts@countdown.co.nz",
+    "receivedAt": "2025-07-22T14:15:00Z",
+    "amount": 128.90,
+    "vendor": "Countdown",
+    "status": "unmatched",
+    "attachmentUrl": "/demo/invoices/countdown-jul.pdf"
+  },
+  {
+    "externalId": "gmail-msg-003",
+    "subject": "Invoice from OfficeMax NZ",
+    "fromEmail": "billing@officemax.co.nz",
+    "receivedAt": "2025-08-01T11:00:00Z",
+    "amount": 89.99,
+    "vendor": "OfficeMax",
+    "status": "matched",
+    "attachmentUrl": "/demo/invoices/officemax-aug.pdf"
+  },
+  {
+    "externalId": "gmail-msg-004",
+    "subject": "Spark Business - Monthly Statement",
+    "fromEmail": "billing@spark.co.nz",
+    "receivedAt": "2025-08-03T08:45:00Z",
+    "amount": 156.00,
+    "vendor": "Spark",
+    "status": "unmatched",
+    "attachmentUrl": "/demo/invoices/spark-aug.pdf"
+  },
+  {
+    "externalId": "gmail-msg-005",
+    "subject": "Trade Me Seller Invoice #TM445566",
+    "fromEmail": "noreply@trademe.co.nz",
+    "receivedAt": "2025-08-04T16:20:00Z",
+    "amount": 245.00,
+    "vendor": "Trade Me Seller",
+    "status": "unmatched",
+    "attachmentUrl": "/demo/invoices/trademe-aug.pdf"
+  }
+]
