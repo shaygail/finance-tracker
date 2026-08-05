@@ -49,7 +49,13 @@ export function QrScanner({ ingredients }: QrScannerProps) {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 10,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const edge = Math.min(250, Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7));
+            return { width: edge, height: edge };
+          },
+        },
         (decodedText) => {
           const ing = findIngredient(decodedText);
           if (ing) {
@@ -119,14 +125,14 @@ export function QrScanner({ ingredients }: QrScannerProps) {
               <p className="text-sm text-slate-500">Point camera at ingredient QR code</p>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             {!scanning ? (
-              <Button onClick={startScanner}>
+              <Button onClick={startScanner} className="w-full sm:w-auto" size="lg">
                 <Camera className="mr-2 h-4 w-4" />
                 Start Scanner
               </Button>
             ) : (
-              <Button variant="outline" onClick={stopScanner}>
+              <Button variant="outline" onClick={stopScanner} className="w-full sm:w-auto" size="lg">
                 <CameraOff className="mr-2 h-4 w-4" />
                 Stop Scanner
               </Button>
