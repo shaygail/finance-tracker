@@ -24,12 +24,13 @@ Works in the browser on desktop and phone. On mobile, **Add to Home Screen** for
 
 ## Quick start (local)
 
-**Requirements:** Node.js 20+, npm
+Local and production both use **PostgreSQL** (Railway, Neon, or Docker). See [DEPLOY.md](./DEPLOY.md).
 
 ```bash
 cp .env.example .env
+# set DATABASE_URL to your postgresql://... connection string
 npm install
-npx prisma migrate dev
+npx prisma migrate deploy
 npm run db:seed
 npm run dev
 ```
@@ -43,8 +44,6 @@ Open [http://localhost:3000](http://localhost:3000)
 | Owner | `owner@stllhaus.co.nz` | `demo1234` |
 | Accountant | `accountant@stllhaus.co.nz` | `demo1234` |
 
-Local demo uses **SQLite** (`DATABASE_URL=file:./dev.db`). Production uses **PostgreSQL**.
-
 ### Mobile
 
 Safari / Chrome → Share / Menu → **Add to Home Screen**. Use the Scan QR tab with the rear camera for stock counts.
@@ -56,10 +55,9 @@ Safari / Chrome → Share / Menu → **Add to Home Screen**. Use the Scan QR tab
 Full steps: **[DEPLOY.md](./DEPLOY.md)**
 
 1. Create **Railway** PostgreSQL → copy public `DATABASE_URL`
-2. Set `provider = "postgresql"` in `prisma/schema.prisma`
-3. Run migrate + seed against Railway
-4. Import this repo in **[Vercel](https://vercel.com)**
-5. Add env vars (see below) → deploy
+2. Run migrate + seed against Railway (see `DEPLOY.md`)
+3. Import this repo in **[Vercel](https://vercel.com)**
+4. Add env vars (see below) → deploy
 
 After deploy, invite your accountant from **Settings**, or share a seeded accountant login.
 
