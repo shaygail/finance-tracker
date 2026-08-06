@@ -1,24 +1,30 @@
 # STLL HAUS Finance Tracker
 
-Web + mobile-friendly finance tracker for **STLL HAUS** — expenses, GST reporting, costing CSV import, QR ingredient stock counts, POS sales sync, and savings goals.
+A web app for running **STLL HAUS** day-to-day finances — expenses, NZ GST, inventory, POS sales, and invoice inbox — built for owners and accountants.
 
-Works in the browser on desktop and phones. On mobile you can **Add to Home Screen** for an app-like experience (PWA).
+Works in the browser on desktop and phone. On mobile, **Add to Home Screen** for a PWA-style app.
+
+---
 
 ## Features
 
-- **Manual expense entry** — Date, Purchases, Amount, Qty, Total, Payment, Category
-- **Costing CSV import** — supports `costing(Purchase S).csv` with 4-bucket categories
-- **POS integration** — sync menu items and sales from STLL Haus POS (Railway PostgreSQL)
-- **Mock Gmail inbox** — invoice list (or real Gmail OAuth sync — see `docs/GMAIL-INTEGRATION.md`)
-- **QR ingredient inventory** — scan + printable label sheet (camera-friendly on phones)
-- **Dashboard** — KPIs, best sellers, low-stock alerts
-- **Sales report** — daily revenue chart, best sellers, recent orders
-- **GST report** — FY 2025/26, period breakdown, IRD due-date hints
-- **Savings goals** — tied to revenue − expenses surplus
-- **Team access** — owner + accountant roles, Resend invite flow
-- **Responsive UI** — desktop sidebar, mobile bottom nav + drawer menu
+| Area | What it does |
+|------|----------------|
+| **Dashboard** | Revenue, expenses, GST paid, low-stock alerts, best sellers |
+| **Expenses** | Manual entry with GST split, categories, payment modes |
+| **CSV import** | Costing / purchase CSV with 4-bucket categorisation |
+| **POS sync** | Pull products & sales from STLL Haus POS (Postgres) |
+| **Invoices** | Gmail OAuth — connect multiple inboxes and sync invoice mail |
+| **Inventory** | Ingredients, par levels, QR labels, camera stock counts |
+| **Reports** | Sales charts + GST periods with IRD-oriented due dates |
+| **Goals** | Savings targets linked to surplus (revenue − expenses) |
+| **Team** | Owner + accountant roles, invite flow via Resend |
 
-## Quick start
+---
+
+## Quick start (local)
+
+**Requirements:** Node.js 20+, npm
 
 ```bash
 cp .env.example .env
@@ -30,26 +36,66 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### Demo logins
+
 | Role | Email | Password |
 |------|-------|----------|
 | Owner | `owner@stllhaus.co.nz` | `demo1234` |
 | Accountant | `accountant@stllhaus.co.nz` | `demo1234` |
 
-### Mobile tip
+Local demo uses **SQLite** (`DATABASE_URL=file:./dev.db`). Production uses **PostgreSQL**.
 
-On iPhone/Android, open the site in Safari/Chrome → **Share / Menu → Add to Home Screen**. The Scan QR tab uses the rear camera for stock counts.
+### Mobile
 
-## Deploy
+Safari / Chrome → Share / Menu → **Add to Home Screen**. Use the Scan QR tab with the rear camera for stock counts.
 
-See [DEPLOY.md](./DEPLOY.md) for Vercel + Railway PostgreSQL setup.
+---
 
-Quick path for a public web app your accountant can use:
+## Deploy (Vercel + Railway)
 
-1. Push this repo to GitHub (public)
-2. Create Railway PostgreSQL and set `DATABASE_URL`
-3. Import the repo in [Vercel](https://vercel.com) and add env vars from `DEPLOY.md`
-4. After deploy, seed demo users or invite your accountant from **Settings**
+Full steps: **[DEPLOY.md](./DEPLOY.md)**
+
+1. Create **Railway** PostgreSQL → copy public `DATABASE_URL`
+2. Set `provider = "postgresql"` in `prisma/schema.prisma`
+3. Run migrate + seed against Railway
+4. Import this repo in **[Vercel](https://vercel.com)**
+5. Add env vars (see below) → deploy
+
+After deploy, invite your accountant from **Settings**, or share a seeded accountant login.
+
+### Required environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Railway Postgres connection string |
+| `AUTH_SECRET` / `NEXTAUTH_SECRET` | Auth.js secrets (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | Public app URL (`https://….vercel.app`) |
+| `MOCK_GMAIL` | `true` until real Gmail OAuth is configured |
+
+### Optional
+
+| Variable | Purpose |
+|----------|---------|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Real Gmail invoice sync |
+| `RESEND_API_KEY` | Accountant invite emails |
+| `POS_DATABASE_URL` / `POS_PRESET` | POS sales sync |
+
+---
+
+## Docs
+
+- [Deploy (Vercel + Railway)](./DEPLOY.md)
+- [Gmail invoice sync](./docs/GMAIL-INTEGRATION.md)
+- [POS integration](./docs/POS-INTEGRATION.md)
+
+---
 
 ## Stack
 
-Next.js 16 · TypeScript · Tailwind · Prisma · NextAuth · Resend · Railway · Vercel
+**Next.js 16** · **React 19** · **TypeScript** · **Tailwind CSS** · **Prisma** · **NextAuth (Auth.js)** · **Resend** · **Gmail API** · **Vercel** · **Railway**
+
+---
+
+## License
+
+Private / proprietary for STLL HAUS unless otherwise noted.
