@@ -18,6 +18,11 @@ export async function createTransaction(formData: FormData): Promise<void> {
   const paymentMode = formData.get("paymentMode") as string;
   const categoryId = (formData.get("categoryId") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const typeRaw = (formData.get("type") as string) || "expense";
+  const type =
+    typeRaw === "income" || typeRaw === "sale" || typeRaw === "refund"
+      ? typeRaw
+      : "expense";
 
   if (!date || !vendor || isNaN(unitAmount)) {
     throw new Error("Missing required fields");
@@ -27,7 +32,7 @@ export async function createTransaction(formData: FormData): Promise<void> {
   const gst = calculateGstFromInc(totalAmount);
 
   let resolvedCategoryId = categoryId;
-  if (!resolvedCategoryId) {
+  if (!resolvedCategoryId && type === "expense") {
     const suggestion = await suggestCategory(businessId, vendor);
     if (suggestion) {
       resolvedCategoryId = suggestion.categoryId;
@@ -48,7 +53,7 @@ export async function createTransaction(formData: FormData): Promise<void> {
       gstAmount: gst.gstAmount,
       amountIncGst: gst.amountIncGst,
       gstType: "standard_15",
-      type: "expense",
+      type,
       source: "manual",
       notes,
     },

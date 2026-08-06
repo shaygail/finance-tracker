@@ -8,14 +8,26 @@ import { calculateGstFromInc } from "@/lib/gst/nz";
 import { formatCurrency } from "@/lib/utils";
 import { createTransaction } from "@/app/(dashboard)/transactions/actions";
 
-interface NewTransactionFormProps {
-  categories: Array<{ id: string; name: string }>;
-  paymentModes: string[];
+interface CategoryOption {
+  id: string;
+  name: string;
+  type: string;
 }
 
-export function NewTransactionForm({ categories, paymentModes }: NewTransactionFormProps) {
+interface NewTransactionFormProps {
+  categories: CategoryOption[];
+  paymentModes: string[];
+  transactionTypes: Array<{ value: string; label: string }>;
+}
+
+export function NewTransactionForm({
+  categories,
+  paymentModes,
+  transactionTypes,
+}: NewTransactionFormProps) {
   const [unitAmount, setUnitAmount] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [type, setType] = useState("expense");
   const [pending, setPending] = useState(false);
 
   const totals = useMemo(() => {
@@ -24,6 +36,11 @@ export function NewTransactionForm({ categories, paymentModes }: NewTransactionF
     const total = Math.round(unit * qty * 100) / 100;
     return calculateGstFromInc(total);
   }, [unitAmount, quantity]);
+
+  const filteredCategories = useMemo(() => {
+    const categoryType = type === "refund" ? "expense" : type === "sale" ? "income" : type;
+    return categories.filter((c) => c.type === categoryType);
+  }, [categories, type]);
 
   async function handleSubmit(formData: FormData) {
     setPending(true);
@@ -35,17 +52,57 @@ export function NewTransactionForm({ categories, paymentModes }: NewTransactionF
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const isIncomeLike = type === "income" || type === "sale";
 
   return (
     <form action={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
+          <Label htmlFor="type">Type</Label>
+          <Select
+            id="type"
+            name="type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            required
+          >
+            {transactionTypes.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
           <Label htmlFor="date">Date</Label>
           <Input id="date" name="date" type="date" defaultValue={today} required />
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="vendor">Vendor / Purchases</Label>
-          <Input id="vendor" name="vendor" placeholder="e.g. Pak'nSave" required />
+          <Label htmlFor="vendor">
+            {isIncomeLike ? "Customer / Source" : "Vendor / Purchases"}
+          </Label>
+          <Input
+            id="vendor"
+            name="vendor"
+            placeholder={isIncomeLike ? "e.g. Counter sales" : "e.g. Pak'nSave"}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="categoryId">Category</Label>
+          <Select id="categoryId" name="categoryId" defaultValue="" key={type}>
+            <option value="">
+              {type === "expense" ? "Auto-detect from vendor" : "Select category"}
+            </option>
+            {filteredCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </Select>
         </div>
       </div>
 
@@ -91,21 +148,9 @@ export function NewTransactionForm({ categories, paymentModes }: NewTransactionF
           </Select>
         </div>
         <div>
-          <Label htmlFor="categoryId">Category</Label>
-          <Select id="categoryId" name="categoryId" defaultValue="">
-            <option value="">Auto-detect from vendor</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </Select>
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Input id="notes" name="notes" placeholder="Additional details" />
         </div>
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes (optional)</Label>
-        <Input id="notes" name="notes" placeholder="Additional details" />
       </div>
 
       <div className="rounded-lg bg-slate-50 p-4">
@@ -116,7 +161,7 @@ export function NewTransactionForm({ categories, paymentModes }: NewTransactionF
             <p className="font-semibold text-slate-900">{formatCurrency(totals.amountExGst)}</p>
           </div>
           <div>
-            <p className="text-slate-500">GST</p>
+            <p className="text-slate-500">Tax (GST)</p>
             <p className="font-semibold text-slate-900">{formatCurrency(totals.gstAmount)}</p>
           </div>
           <div>
