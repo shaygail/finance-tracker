@@ -38,6 +38,7 @@ model Business {
   savingsGoals        SavingsGoal[]
   categorisationRules CategorisationRule[]
   invites             BusinessInvite[]
+  gmailConnections    GmailConnection[]
 }
 
 model BusinessMember {
@@ -180,8 +181,23 @@ model Invoice {
   vendor        String?
   status        String   @default("unmatched")
   attachmentUrl String?
+  gmailEmail    String?
   business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   @@unique([businessId, externalId])
+}
+
+model GmailConnection {
+  id           String    @id @default(cuid())
+  businessId   String
+  email        String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  business     Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, email])
 }
 
 model ImportBatch {

@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { DEMO_CREDENTIALS, BUSINESS } from "@/lib/constants";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,21 +18,25 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error) {
+        setError("Invalid email or password");
+        return;
+      }
 
-    if (result?.error) {
-      setError("Invalid email or password");
-      return;
+      // Hard navigation — soft router.push can hang after Auth.js sets the cookie
+      window.location.assign("/dashboard");
+    } catch {
+      setError("Sign in failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   function fillDemo(role: "owner" | "accountant") {

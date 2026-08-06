@@ -9,7 +9,7 @@ Works in the browser on desktop and phones. On mobile you can **Add to Home Scre
 - **Manual expense entry** — Date, Purchases, Amount, Qty, Total, Payment, Category
 - **Costing CSV import** — supports `costing(Purchase S).csv` with 4-bucket categories
 - **POS integration** — sync menu items and sales from STLL Haus POS (Railway PostgreSQL)
-- **Mock Gmail inbox** — invoice list (production: Gmail OAuth)
+- **Mock Gmail inbox** — invoice list (or real Gmail OAuth sync — see `docs/GMAIL-INTEGRATION.md`)
 - **QR ingredient inventory** — scan + printable label sheet (camera-friendly on phones)
 - **Dashboard** — KPIs, best sellers, low-stock alerts
 - **Sales report** — daily revenue chart, best sellers, recent orders
@@ -42,6 +42,13 @@ On iPhone/Android, open the site in Safari/Chrome → **Share / Menu → Add to 
 ## Deploy
 
 See [DEPLOY.md](./DEPLOY.md) for Vercel + Railway PostgreSQL setup.
+
+Quick path for a public web app your accountant can use:
+
+1. Push this repo to GitHub (public)
+2. Create Railway PostgreSQL and set `DATABASE_URL`
+3. Import the repo in [Vercel](https://vercel.com) and add env vars from `DEPLOY.md`
+4. After deploy, seed demo users or invite your accountant from **Settings**
 
 ## Stack
 

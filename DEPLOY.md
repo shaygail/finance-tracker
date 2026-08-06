@@ -20,6 +20,7 @@
    - `NEXTAUTH_SECRET` — random string (`openssl rand -base64 32`)
    - `NEXTAUTH_URL` — your Vercel URL
    - `MOCK_GMAIL=true`
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — optional, for real Gmail invoice sync (see `docs/GMAIL-INTEGRATION.md`)
    - `RESEND_API_KEY` — optional, for accountant invites
 3. Deploy — build runs `prisma migrate deploy` automatically (see `vercel.json`)
 
@@ -39,5 +40,5 @@ Demo login: `owner@stllhaus.co.nz` / `demo1234`
 
 - **App:** Vercel (Next.js 16, TypeScript, Tailwind)
 - **Database:** Railway PostgreSQL (SQLite for local demo only)
-- **Email:** Resend (accountant invites)
+- **Email:** Resend (accountant invites), Gmail OAuth (invoice inbox)
 - **Auth:** NextAuth credentials
