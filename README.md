@@ -1,17 +1,22 @@
 # STLL HAUS Finance Tracker
 
-Web-based finance tracker for **STLL HAUS** — expenses, GST reporting, costing CSV import, QR ingredient stock counts, and savings goals.
+Web + mobile-friendly finance tracker for **STLL HAUS** — expenses, GST reporting, costing CSV import, QR ingredient stock counts, POS sales sync, and savings goals.
+
+Works in the browser on desktop and phones. On mobile you can **Add to Home Screen** for an app-like experience (PWA).
 
 ## Features
 
 - **Manual expense entry** — Date, Purchases, Amount, Qty, Total, Payment, Category
 - **Costing CSV import** — supports `costing(Purchase S).csv` with 4-bucket categories
+- **POS integration** — sync menu items and sales from STLL Haus POS (Railway PostgreSQL)
 - **Mock Gmail inbox** — invoice list (production: Gmail OAuth)
-- **QR ingredient inventory** — scan + printable label sheet
+- **QR ingredient inventory** — scan + printable label sheet (camera-friendly on phones)
 - **Dashboard** — KPIs, best sellers, low-stock alerts
+- **Sales report** — daily revenue chart, best sellers, recent orders
 - **GST report** — FY 2025/26, period breakdown, IRD due-date hints
 - **Savings goals** — tied to revenue − expenses surplus
 - **Team access** — owner + accountant roles, Resend invite flow
+- **Responsive UI** — desktop sidebar, mobile bottom nav + drawer menu
 
 ## Quick start
 
@@ -29,6 +34,10 @@ Open [http://localhost:3000](http://localhost:3000)
 |------|-------|----------|
 | Owner | `owner@stllhaus.co.nz` | `demo1234` |
 | Accountant | `accountant@stllhaus.co.nz` | `demo1234` |
+
+### Mobile tip
+
+On iPhone/Android, open the site in Safari/Chrome → **Share / Menu → Add to Home Screen**. The Scan QR tab uses the rear camera for stock counts.
 
 ## Deploy
 

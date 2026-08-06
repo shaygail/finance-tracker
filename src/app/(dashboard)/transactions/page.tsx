@@ -18,13 +18,13 @@ export default async function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Transactions</h1>
           <p className="text-slate-500">{transactions.length} records</p>
         </div>
-        <Link href="/transactions/new">
-          <Button>
+        <Link href="/transactions/new" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             New Transaction
           </Button>

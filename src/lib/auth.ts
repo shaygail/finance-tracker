@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required when running behind tunnels / reverse proxies (Cloudflare, etc.)
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",
