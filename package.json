@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:migrate": "npx prisma migrate dev",
+    "db:deploy": "npx prisma migrate deploy",
     "generate:xlsx": "npx tsx scripts/generate-sample-xlsx.ts",
     "postinstall": "prisma generate"
   },
