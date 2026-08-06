@@ -16,23 +16,42 @@ export default async function GstReportPage() {
   const businessId = await getBusinessId();
   const { start, end } = getFinancialYearRange(FY_LABEL);
 
-  const [transactions, business] = await Promise.all([
+  const [transactions, sales, business] = await Promise.all([
     db.transaction.findMany({
       where: { businessId, date: { gte: start, lte: end } },
       include: { category: true },
       orderBy: { date: "asc" },
     }),
+    db.sale.findMany({
+      where: { businessId, soldAt: { gte: start, lte: end } },
+    }),
     db.business.findUnique({ where: { id: businessId } }),
   ]);
 
   const frequency = (business?.gstFilingFrequency ?? "two_monthly") as GstFilingFrequency;
-  const periodSummaries = summariseGstPeriods(transactions, FY_LABEL, frequency);
+
+  const combinedForPeriods = [
+    ...transactions.map((t) => ({
+      date: t.date,
+      type: t.type,
+      gstAmount: t.gstAmount,
+    })),
+    ...sales.map((s) => ({
+      date: s.soldAt,
+      type: "sale" as const,
+      gstAmount: s.gstAmount,
+    })),
+  ];
+
+  const periodSummaries = summariseGstPeriods(combinedForPeriods, FY_LABEL, frequency);
 
   const expenses = transactions.filter((t) => t.type === "expense" || t.type === "refund");
-  const income = transactions.filter((t) => t.type === "income" || t.type === "sale");
-
   const gstOnExpenses = expenses.reduce((sum, t) => sum + t.gstAmount, 0);
-  const gstOnIncome = income.reduce((sum, t) => sum + t.gstAmount, 0);
+  const gstOnIncomeFromSales = sales.reduce((sum, s) => sum + s.gstAmount, 0);
+  const gstOnIncomeFromTx = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.gstAmount, 0);
+  const gstOnIncome = gstOnIncomeFromSales + gstOnIncomeFromTx;
   const netGst = gstOnIncome - gstOnExpenses;
 
   const byCategory = expenses.reduce(

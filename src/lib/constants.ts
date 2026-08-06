@@ -1,9 +1,17 @@
+export const BUSINESS = {
+  name: "STLL HAUS",
+  legalName: "STLL HAUS",
+  tagline: "Finance & inventory",
+} as const;
+
 export const PAYMENT_MODES = [
   "Cash",
   "EFTPOS",
   "Credit Card",
+  "Card/AfterPay",
+  "Direct Debit",
   "Bank Transfer",
-  "Online",
+  "Finance",
   "Other",
 ] as const;
 
@@ -11,14 +19,16 @@ export type PaymentMode = (typeof PAYMENT_MODES)[number];
 
 export const DEMO_CREDENTIALS = {
   owner: {
-    email: "owner@demo.co.nz",
+    email: "owner@stllhaus.co.nz",
     password: "demo1234",
     role: "owner",
+    name: "STLL HAUS Owner",
   },
   accountant: {
-    email: "accountant@demo.co.nz",
+    email: "accountant@stllhaus.co.nz",
     password: "demo1234",
     role: "accountant",
+    name: "STLL HAUS Accountant",
   },
 } as const;
 

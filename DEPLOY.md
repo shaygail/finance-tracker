@@ -33,7 +33,7 @@ npm run db:seed
 npm run dev
 ```
 
-Demo login: `owner@demo.co.nz` / `demo1234`
+Demo login: `owner@stllhaus.co.nz` / `demo1234`
 
 ## Stack
 

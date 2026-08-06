@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { DEMO_CREDENTIALS } from "@/lib/constants";
+import { DEMO_CREDENTIALS, BUSINESS } from "@/lib/constants";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,9 +47,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">Finance Tracker</CardTitle>
+          <CardTitle className="text-center text-2xl">{BUSINESS.name}</CardTitle>
           <p className="text-center text-sm text-slate-500">
-            Sign in to your NZ business account
+            Sign in to manage finances & inventory
           </p>
         </CardHeader>
         <CardContent>

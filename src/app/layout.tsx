@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BUSINESS } from "@/lib/constants";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Finance Tracker | NZ Business Demo",
-  description: "Small business finance tracker with GST, inventory, and reporting",
+  title: `${BUSINESS.name} | Finance Tracker`,
+  description: `${BUSINESS.name} — NZ business finance, GST, inventory, and reporting`,
 };
 
 export default function RootLayout({

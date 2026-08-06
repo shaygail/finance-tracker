@@ -1,41 +1,41 @@
 import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
+import { getTotalRevenue, getBestSellers } from "@/lib/revenue";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts";
-import { AlertTriangle, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Wallet, ShoppingCart } from "lucide-react";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const businessId = await getBusinessId();
 
-  const [transactions, products, ingredients, business] = await Promise.all([
-    db.transaction.findMany({
-      where: { businessId },
-      include: { category: true },
-      orderBy: { date: "desc" },
-    }),
-    db.product.findMany({
-      where: { businessId },
-      orderBy: { revenue: "desc" },
-    }),
-    db.ingredient.findMany({
-      where: { businessId },
-      orderBy: { name: "asc" },
-    }),
-    db.business.findUnique({ where: { id: businessId } }),
-  ]);
+  const [transactions, ingredients, business, totalRevenue, bestSellers, saleCount] =
+    await Promise.all([
+      db.transaction.findMany({
+        where: { businessId },
+        include: { category: true },
+        orderBy: { date: "desc" },
+      }),
+      db.ingredient.findMany({
+        where: { businessId },
+        orderBy: { name: "asc" },
+      }),
+      db.business.findUnique({ where: { id: businessId } }),
+      getTotalRevenue(businessId),
+      getBestSellers(businessId, 5),
+      db.sale.count({ where: { businessId } }),
+    ]);
 
   const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
+    .filter((t) => t.type === "expense" || t.type === "refund")
     .reduce((sum, t) => sum + t.totalAmount, 0);
 
-  const totalGst = transactions.reduce((sum, t) => sum + t.gstAmount, 0);
-
-  const totalRevenue = products.reduce((sum, p) => sum + p.revenue, 0);
+  const totalGstPaid = transactions.reduce((sum, t) => sum + t.gstAmount, 0);
 
   const expenseByCategory = transactions
-    .filter((t) => t.type === "expense" && t.category)
+    .filter((t) => (t.type === "expense" || t.type === "refund") && t.category)
     .reduce(
       (acc, t) => {
         const name = t.category!.name;
@@ -50,23 +50,39 @@ export default async function DashboardPage() {
     value: Math.round(value * 100) / 100,
   }));
 
-  const barData = products.map((p) => ({
+  const barData = bestSellers.map((p) => ({
     name: p.name.length > 12 ? p.name.slice(0, 12) + "…" : p.name,
     revenue: p.revenue,
   }));
 
   const lowStock = ingredients.filter((i) => i.currentStock <= i.parLevel);
 
-  const bestSellers = products.slice(0, 5);
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500">{business?.name ?? "Your business"}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500">{business?.name ?? "STLL HAUS"}</p>
+        </div>
+        {saleCount > 0 && (
+          <Badge variant="success">{saleCount} POS orders synced</Badge>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="rounded-lg bg-emerald-100 p-3">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Sales revenue</p>
+              <p className="text-xl font-bold text-slate-900">
+                {formatCurrency(totalRevenue)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="rounded-lg bg-red-100 p-3">
@@ -82,26 +98,13 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-emerald-100 p-3">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Product Revenue</p>
-              <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalRevenue)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
             <div className="rounded-lg bg-blue-100 p-3">
               <Wallet className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">GST Collected/Paid</p>
+              <p className="text-sm text-slate-500">Input GST (expenses)</p>
               <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalGst)}
+                {formatCurrency(totalGstPaid)}
               </p>
             </div>
           </CardContent>
@@ -119,6 +122,23 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {saleCount === 0 && (
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardContent className="flex items-center gap-4 py-4">
+            <ShoppingCart className="h-8 w-8 text-emerald-600" />
+            <div>
+              <p className="font-medium text-slate-900">Connect your POS database</p>
+              <p className="text-sm text-slate-600">
+                Sync products and sales history from Settings →{" "}
+                <Link href="/settings" className="text-emerald-700 hover:underline">
+                  POS Integration
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -130,7 +150,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Product Revenue</CardTitle>
+            <CardTitle>Best Sellers {saleCount > 0 ? "(POS)" : ""}</CardTitle>
           </CardHeader>
           <CardContent>
             <RevenueBarChart data={barData} />

@@ -1,17 +1,16 @@
 import { db } from "@/lib/db";
 import { calculateSurplus } from "@/lib/gst/nz";
+import { getTotalRevenue } from "@/lib/revenue";
 
 export async function getBusinessSurplus(businessId: string): Promise<number> {
-  const [transactions, products] = await Promise.all([
+  const [transactions, totalRevenue] = await Promise.all([
     db.transaction.findMany({
       where: { businessId, type: { in: ["expense", "refund"] } },
     }),
-    db.product.findMany({ where: { businessId } }),
+    getTotalRevenue(businessId),
   ]);
 
   const totalExpenses = transactions.reduce((sum, t) => sum + t.totalAmount, 0);
-  const totalRevenue = products.reduce((sum, p) => sum + p.revenue, 0);
-
   return calculateSurplus(totalRevenue, totalExpenses);
 }
 

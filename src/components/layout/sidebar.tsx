@@ -15,9 +15,11 @@ import {
   LogOut,
   Upload,
   Plus,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
+import { BUSINESS } from "@/lib/constants";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -28,6 +30,7 @@ const navItems = [
   { href: "/inventory/ingredients", label: "Ingredients", icon: Package },
   { href: "/inventory/scan", label: "Scan QR", icon: ScanLine },
   { href: "/products", label: "Products", icon: ShoppingBag },
+  { href: "/reports/sales", label: "Sales Report", icon: BarChart3 },
   { href: "/goals", label: "Savings Goals", icon: Target },
   { href: "/reports/gst", label: "GST Report", icon: FileSpreadsheet },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -39,8 +42,8 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-slate-900 text-white">
       <div className="border-b border-slate-700 px-6 py-5">
-        <h1 className="text-lg font-bold text-emerald-400">Finance Tracker</h1>
-        <p className="text-xs text-slate-400">NZ Demo Business</p>
+        <h1 className="text-lg font-bold tracking-wide text-emerald-400">{BUSINESS.name}</h1>
+        <p className="text-xs text-slate-400">{BUSINESS.tagline}</p>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {navItems.map(({ href, label, icon: Icon }) => {

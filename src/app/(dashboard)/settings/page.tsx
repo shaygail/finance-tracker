@@ -2,14 +2,16 @@ import { db } from "@/lib/db";
 import { getBusinessId, requireSession } from "@/lib/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Users } from "lucide-react";
+import { Settings, Users, Database } from "lucide-react";
 import { InviteAccountantForm } from "@/components/settings/invite-form";
+import { PosSyncPanel } from "@/components/settings/pos-sync-panel";
+import { getPosStatus } from "@/lib/pos/sync";
 
 export default async function SettingsPage() {
   const session = await requireSession();
   const businessId = await getBusinessId();
 
-  const [business, members, invites] = await Promise.all([
+  const [business, members, invites, posStatus] = await Promise.all([
     db.business.findUnique({ where: { id: businessId } }),
     db.businessMember.findMany({
       where: { businessId },
@@ -19,6 +21,7 @@ export default async function SettingsPage() {
       where: { businessId },
       orderBy: { createdAt: "desc" },
     }),
+    getPosStatus(businessId),
   ]);
 
   return (
@@ -56,6 +59,24 @@ export default async function SettingsPage() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5 text-emerald-600" />
+            POS Integration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PosSyncPanel
+            configured={posStatus.configured}
+            lastSyncedAt={posStatus.lastSyncedAt?.toISOString() ?? null}
+            saleCount={posStatus.saleCount}
+            lastLogStatus={posStatus.lastLog?.status}
+            lastLogMessage={posStatus.lastLog?.message}
+          />
         </CardContent>
       </Card>
 

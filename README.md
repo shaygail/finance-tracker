@@ -1,6 +1,6 @@
-# NZ Retail Finance Tracker
+# STLL HAUS Finance Tracker
 
-Web-based finance tracker for NZ retail/café businesses — expenses, GST reporting, costing CSV import, QR ingredient stock counts, and savings goals.
+Web-based finance tracker for **STLL HAUS** — expenses, GST reporting, costing CSV import, QR ingredient stock counts, and savings goals.
 
 ## Features
 
@@ -27,8 +27,8 @@ Open [http://localhost:3000](http://localhost:3000)
 
 | Role | Email | Password |
 |------|-------|----------|
-| Owner | `owner@demo.co.nz` | `demo1234` |
-| Accountant | `accountant@demo.co.nz` | `demo1234` |
+| Owner | `owner@stllhaus.co.nz` | `demo1234` |
+| Accountant | `accountant@stllhaus.co.nz` | `demo1234` |
 
 ## Deploy
 

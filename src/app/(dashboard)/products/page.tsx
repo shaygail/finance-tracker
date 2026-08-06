@@ -20,7 +20,9 @@ export default async function ProductsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Products</h1>
-        <p className="text-slate-500">Best sellers and revenue performance</p>
+        <p className="text-slate-500">
+          Best sellers and revenue from POS sync
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -62,6 +64,7 @@ export default async function ProductsPage() {
                 <th className="px-6 py-3 font-medium">#</th>
                 <th className="px-6 py-3 font-medium">Product</th>
                 <th className="px-6 py-3 font-medium">SKU</th>
+                <th className="px-6 py-3 font-medium">Source</th>
                 <th className="px-6 py-3 font-medium text-right">Units Sold</th>
                 <th className="px-6 py-3 font-medium text-right">Revenue</th>
                 <th className="px-6 py-3 font-medium text-right">COGS</th>
@@ -76,6 +79,11 @@ export default async function ProductsPage() {
                     <td className="px-6 py-3 text-slate-400">{i + 1}</td>
                     <td className="px-6 py-3 font-medium text-slate-900">{p.name}</td>
                     <td className="px-6 py-3 text-slate-500">{p.sku ?? "—"}</td>
+                    <td className="px-6 py-3">
+                      <Badge variant={p.posProductId ? "success" : "muted"}>
+                        {p.posProductId ? "POS" : "Manual"}
+                      </Badge>
+                    </td>
                     <td className="px-6 py-3 text-right text-slate-600">{p.unitsSold}</td>
                     <td className="px-6 py-3 text-right font-medium text-slate-900">
                       {formatCurrency(p.revenue)}

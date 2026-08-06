@@ -24,12 +24,15 @@ model Business {
   balanceDate         String              @default("03-31")
   gstFilingFrequency  String              @default("two_monthly")
   financialYearStart  String              @default("04-01")
+  posLastSyncedAt     DateTime?
   createdAt           DateTime            @default(now())
   members             BusinessMember[]
   categories          Category[]
   transactions        Transaction[]
   ingredients         Ingredient[]
   products            Product[]
+  sales               Sale[]
+  posSyncLogs         PosSyncLog[]
   invoices            Invoice[]
   importBatches       ImportBatch[]
   savingsGoals        SavingsGoal[]
@@ -107,15 +110,63 @@ model StockCount {
 }
 
 model Product {
-  id         String   @id @default(cuid())
-  businessId String
-  name       String
-  sku        String?
-  unitsSold  Float    @default(0)
-  revenue    Float    @default(0)
-  cogs       Float    @default(0)
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  businessId   String
+  name         String
+  sku          String?
+  posProductId String?
+  unitPrice    Float      @default(0)
+  unitsSold    Float      @default(0)
+  revenue      Float      @default(0)
+  cogs         Float      @default(0)
+  lastSyncedAt DateTime?
+  business     Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleLines    SaleLine[]
+
   @@unique([businessId, name])
+  @@unique([businessId, posProductId])
+}
+
+model Sale {
+  id           String     @id @default(cuid())
+  businessId   String
+  posSaleId    String
+  soldAt       DateTime
+  totalAmount  Float
+  paymentMode  String     @default("Other")
+  amountExGst  Float
+  gstAmount    Float
+  amountIncGst Float
+  source       String     @default("pos")
+  createdAt    DateTime   @default(now())
+  business     Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  lines        SaleLine[]
+
+  @@unique([businessId, posSaleId])
+}
+
+model SaleLine {
+  id           String   @id @default(cuid())
+  saleId       String
+  productId    String?
+  posProductId String?
+  productName  String
+  quantity     Float
+  unitPrice    Float
+  lineTotal    Float
+  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product      Product? @relation(fields: [productId], references: [id])
+}
+
+model PosSyncLog {
+  id           String   @id @default(cuid())
+  businessId   String
+  syncedAt     DateTime @default(now())
+  productsSync Int      @default(0)
+  salesSync    Int      @default(0)
+  status       String   @default("success")
+  message      String?
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 model Invoice {

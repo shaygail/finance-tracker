@@ -30,16 +30,16 @@ const CATEGORIES = [
 ];
 
 const INGREDIENTS = [
-  { name: "Matcha (Thea)", unit: "g", parLevel: 500, currentStock: 180, qrCode: "ING-MATCHA-001" },
-  { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "ING-CREAM-002" },
-  { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "ING-OAT-003" },
-  { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "ING-UBE-004" },
-  { name: "Condensed Milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "ING-COND-005" },
-  { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "ING-COCO-006" },
-  { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "ING-BEANS-007" },
-  { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "ING-CUPS-008" },
-  { name: "Biscoff Spread", unit: "kg", parLevel: 2, currentStock: 0.8, qrCode: "ING-BISC-009" },
-  { name: "Frozen Strawberries", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "ING-STRAW-010" },
+  { name: "Matcha (Thea)", unit: "g", parLevel: 500, currentStock: 180, qrCode: "STLL-MATCHA-001" },
+  { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "STLL-CREAM-002" },
+  { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "STLL-OAT-003" },
+  { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "STLL-UBE-004" },
+  { name: "Condensed Milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "STLL-COND-005" },
+  { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "STLL-COCO-006" },
+  { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-BEANS-007" },
+  { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "STLL-CUPS-008" },
+  { name: "Biscoff Spread", unit: "kg", parLevel: 2, currentStock: 0.8, qrCode: "STLL-BISC-009" },
+  { name: "Frozen Strawberries", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-STRAW-010" },
 ];
 
 const PRODUCTS = [
@@ -63,6 +63,9 @@ async function main() {
   console.log("Seeding database...");
 
   await db.stockCount.deleteMany();
+  await db.saleLine.deleteMany();
+  await db.sale.deleteMany();
+  await db.posSyncLog.deleteMany();
   await db.transaction.deleteMany();
   await db.categorisationRule.deleteMany();
   await db.importBatch.deleteMany();
@@ -80,23 +83,23 @@ async function main() {
 
   const owner = await db.user.create({
     data: {
-      email: "owner@demo.co.nz",
-      name: "Demo Owner",
+      email: "owner@stllhaus.co.nz",
+      name: "STLL HAUS Owner",
       passwordHash,
     },
   });
 
   const accountant = await db.user.create({
     data: {
-      email: "accountant@demo.co.nz",
-      name: "Demo Accountant",
+      email: "accountant@stllhaus.co.nz",
+      name: "STLL HAUS Accountant",
       passwordHash,
     },
   });
 
   const business = await db.business.create({
     data: {
-      name: "Kiwi Café Ltd",
+      name: "STLL HAUS",
       gstNumber: "123-456-789",
       balanceDate: "03-31",
       gstFilingFrequency: "two_monthly",
@@ -188,14 +191,14 @@ async function main() {
     data: [
       {
         businessId: business.id,
-        name: "New Commercial Oven",
+        name: "STLL HAUS — Equipment Fund",
         targetAmount: 15000,
         currentAmount: Math.min(surplus * 0.6, 15000),
         deadline: new Date("2026-06-30"),
       },
       {
         businessId: business.id,
-        name: "Emergency Fund",
+        name: "STLL HAUS — Emergency Reserve",
         targetAmount: 10000,
         currentAmount: Math.min(surplus * 0.4, 10000),
         deadline: new Date("2026-03-31"),
@@ -285,9 +288,9 @@ async function main() {
   }
 
   console.log("Seed complete!");
-  console.log("  Business:", business.name);
-  console.log("  Owner: owner@demo.co.nz / demo1234");
-  console.log("  Accountant: accountant@demo.co.nz / demo1234");
+  console.log("  Business: STLL HAUS");
+  console.log("  Owner: owner@stllhaus.co.nz / demo1234");
+  console.log("  Accountant: accountant@stllhaus.co.nz / demo1234");
 }
 
 main()

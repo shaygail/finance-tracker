@@ -21,7 +21,7 @@ export async function sendInviteEmail(params: {
     <p>You've been invited as <strong>${role}</strong> for <strong>${businessName}</strong>.</p>
     <p><a href="${inviteUrl}">Accept invitation and set up your account</a></p>
     <p>This link expires in 7 days.</p>
-    <p style="color:#64748b;font-size:12px;">NZ Retail Finance Tracker — confidential financial data.</p>
+    <p style="color:#64748b;font-size:12px;">STLL HAUS Finance Tracker — confidential financial data.</p>
   `;
 
   if (!resend) {
