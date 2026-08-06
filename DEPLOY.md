@@ -30,7 +30,20 @@ Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`
 
 ### Common build failure
 
-If the log stops at `prisma migrate deploy`, Vercel is missing a valid Postgres `DATABASE_URL`, or it still points at SQLite (`file:./dev.db`). Vercel cannot use SQLite.
+```
+The datasource.url property is required in your Prisma config file when using prisma migrate deploy.
+```
+
+**Cause:** `DATABASE_URL` is not set (or not available at **build** time) in Vercel.
+
+**Fix:** Vercel → Project → **Settings → Environment Variables** → add:
+
+- Key: `DATABASE_URL`
+- Value: Railway **public** Postgres URL (`postgresql://...`)
+- Environments: **Production** (and Preview)
+- Save → **Deployments → Redeploy**
+
+Do not use `file:./dev.db` on Vercel.
 
 ## 3. Local development
 
