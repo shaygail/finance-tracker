@@ -1,53 +1,59 @@
-# Deploy — Vercel + Railway
+# Deploy — Vercel + Railway (or Railway-only)
 
-## 1. Railway (PostgreSQL)
+## 1. Railway PostgreSQL (required)
 
-1. Create a project at [railway.app](https://railway.app)
-2. Add **PostgreSQL**
-3. Copy the **public** `DATABASE_URL` (must start with `postgresql://`)
-4. Run migrate + seed once from your machine:
-   ```bash
-   DATABASE_URL="postgresql://..." npx prisma migrate deploy
-   DATABASE_URL="postgresql://..." npm run db:seed
-   ```
+1. [railway.app](https://railway.app) → **New Project** → **PostgreSQL**  
+   (use a **new** database — not the stllhaus-pos DB)
+2. Open the Postgres service → **Variables** / **Connect**
+3. Copy `DATABASE_URL` (public URL for Vercel; private URL is fine if the app also runs on Railway)
 
-## 2. Vercel (Next.js app)
+### If the **app** also deploys on Railway
+
+In the **same project**:
+
+1. **New** → **GitHub Repo** → `shaygail/finance-tracker`
+2. Open the **web service** → **Variables** → **Add variable**:
+   - `DATABASE_URL` = reference from Postgres  
+     (Railway UI: **Add variable** → **Add reference** → Postgres → `DATABASE_URL`)
+   - `AUTH_SECRET` = long random string
+   - `NEXTAUTH_SECRET` = same as `AUTH_SECRET`
+   - `NEXTAUTH_URL` = your Railway public URL (e.g. `https://….up.railway.app`)
+   - `MOCK_GMAIL` = `true`
+3. Redeploy the web service
+
+Without linking `DATABASE_URL` to the web service, `npm install` / migrate will fail.
+
+## 2. Vercel (Next.js app) — optional if using Railway for the app
 
 1. Import https://github.com/shaygail/finance-tracker
-2. Project → **Settings → Environment Variables** (Production):
+2. **Settings → Environment Variables** (Production):
 
 | Name | Value |
 |------|--------|
-| `DATABASE_URL` | Railway public Postgres URL |
+| `DATABASE_URL` | Railway **public** Postgres URL |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXTAUTH_SECRET` | same as `AUTH_SECRET` |
 | `NEXTAUTH_URL` | `https://YOUR-APP.vercel.app` |
 | `MOCK_GMAIL` | `true` |
 
-Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`
+3. Redeploy
 
-3. Redeploy. Build runs `prisma migrate deploy` then `next build`.
+## 3. Seed (once)
 
-### Common build failure
-
-```
-The datasource.url property is required in your Prisma config file when using prisma migrate deploy.
+```bash
+DATABASE_URL="postgresql://..." npm run db:seed
 ```
 
-**Cause:** `DATABASE_URL` is not set (or not available at **build** time) in Vercel.
+Demo: `owner@stllhaus.co.nz` / `demo1234`
 
-**Fix:** Vercel → Project → **Settings → Environment Variables** → add:
+## Common errors
 
-- Key: `DATABASE_URL`
-- Value: Railway **public** Postgres URL (`postgresql://...`)
-- Environments: **Production** (and Preview)
-- Save → **Deployments → Redeploy**
+**`DATABASE_URL is missing for Prisma`** during Railway/Vercel build  
+→ Add `DATABASE_URL` on the **service that builds** (web app), not only on the Postgres service. On Railway use a **variable reference** from Postgres.
 
-Do not use `file:./dev.db` on Vercel.
+**Do not** use `file:./dev.db` on Railway or Vercel.
 
-## 3. Local development
-
-Use the same Railway/Neon Postgres URL in `.env` (or a local Docker Postgres):
+## Local development
 
 ```bash
 cp .env.example .env
@@ -58,11 +64,9 @@ npm run db:seed
 npm run dev
 ```
 
-Demo login: `owner@stllhaus.co.nz` / `demo1234`
-
 ## Stack
 
-- **App:** Vercel (Next.js 16, TypeScript, Tailwind)
-- **Database:** Railway / Neon PostgreSQL
-- **Email:** Resend (accountant invites), Gmail OAuth (invoice inbox)
+- **App:** Vercel and/or Railway (Next.js 16)
+- **Database:** Railway PostgreSQL
+- **Email:** Resend, Gmail OAuth
 - **Auth:** NextAuth credentials
