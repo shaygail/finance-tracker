@@ -1,10 +1,19 @@
 import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
+import { calculateFinanceTotals } from "@/lib/finance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts";
-import { AlertTriangle, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  TrendingDown,
+  TrendingUp,
+  Package,
+  Receipt,
+  Landmark,
+  Wallet,
+} from "lucide-react";
 
 export default async function DashboardPage() {
   const businessId = await getBusinessId();
@@ -26,13 +35,10 @@ export default async function DashboardPage() {
     db.business.findUnique({ where: { id: businessId } }),
   ]);
 
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.totalAmount, 0);
-
-  const totalGst = transactions.reduce((sum, t) => sum + t.gstAmount, 0);
-
-  const totalRevenue = products.reduce((sum, p) => sum + p.revenue, 0);
+  const { revenue, expenses, cogs, tax, income } = calculateFinanceTotals(
+    products,
+    transactions
+  );
 
   const expenseByCategory = transactions
     .filter((t) => t.type === "expense" && t.category)
@@ -59,6 +65,51 @@ export default async function DashboardPage() {
 
   const bestSellers = products.slice(0, 5);
 
+  const kpis = [
+    {
+      label: "Revenue",
+      value: revenue,
+      icon: TrendingUp,
+      iconBg: "bg-emerald-100",
+      iconColor: "text-emerald-600",
+      valueClass: "text-emerald-700",
+    },
+    {
+      label: "Expenses",
+      value: expenses,
+      icon: TrendingDown,
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
+      valueClass: "text-slate-900",
+    },
+    {
+      label: "COGS",
+      value: cogs,
+      icon: Package,
+      iconBg: "bg-orange-100",
+      iconColor: "text-orange-600",
+      valueClass: "text-slate-900",
+    },
+    {
+      label: "Tax (GST)",
+      value: tax,
+      icon: Landmark,
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      valueClass: "text-slate-900",
+      hint: tax >= 0 ? "Net payable" : "Net refund",
+    },
+    {
+      label: "Income",
+      value: income,
+      icon: Wallet,
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-600",
+      valueClass: income >= 0 ? "text-emerald-700" : "text-red-600",
+      hint: "Revenue − COGS − Expenses",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -66,58 +117,44 @@ export default async function DashboardPage() {
         <p className="text-slate-500">{business?.name ?? "Your business"}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {kpis.map((kpi) => (
+          <Card key={kpi.label}>
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className={`rounded-lg p-3 ${kpi.iconBg}`}>
+                <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-slate-500">{kpi.label}</p>
+                <p className={`truncate text-xl font-bold ${kpi.valueClass}`}>
+                  {formatCurrency(kpi.value)}
+                </p>
+                {"hint" in kpi && kpi.hint ? (
+                  <p className="truncate text-xs text-slate-400">{kpi.hint}</p>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {lowStock.length > 0 && (
         <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-red-100 p-3">
-              <TrendingDown className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Expenses</p>
-              <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalExpenses)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-emerald-100 p-3">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Product Revenue</p>
-              <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalRevenue)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-blue-100 p-3">
-              <Wallet className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">GST Collected/Paid</p>
-              <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalGst)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
+          <CardContent className="flex items-center gap-3 pt-6">
             <div className="rounded-lg bg-amber-100 p-3">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Low Stock Items</p>
-              <p className="text-xl font-bold text-slate-900">{lowStock.length}</p>
+              <p className="text-sm font-medium text-slate-900">
+                {lowStock.length} low stock item{lowStock.length === 1 ? "" : "s"}
+              </p>
+              <p className="text-sm text-slate-500">
+                Check inventory to restock below par level
+              </p>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -150,6 +187,7 @@ export default async function DashboardPage() {
                   <th className="pb-2 font-medium">Product</th>
                   <th className="pb-2 font-medium">Units</th>
                   <th className="pb-2 font-medium text-right">Revenue</th>
+                  <th className="pb-2 font-medium text-right">COGS</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,6 +198,9 @@ export default async function DashboardPage() {
                     <td className="py-2 text-right text-slate-900">
                       {formatCurrency(p.revenue)}
                     </td>
+                    <td className="py-2 text-right text-slate-600">
+                      {formatCurrency(p.cogs)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -168,7 +209,10 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Low Stock Alerts</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-slate-500" />
+              Low Stock Alerts
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {lowStock.length === 0 ? (

@@ -180,6 +180,38 @@ async function main() {
     });
   }
 
+  const sampleIncome = [
+    { vendor: "Counter sales — weekdays", amount: 1850, daysAgo: 7 },
+    { vendor: "Counter sales — weekend", amount: 2420, daysAgo: 3 },
+    { vendor: "Catering — corporate order", amount: 680, daysAgo: 14 },
+    { vendor: "Online orders", amount: 420, daysAgo: 5 },
+  ];
+
+  for (const sample of sampleIncome) {
+    const date = new Date();
+    date.setDate(date.getDate() - sample.daysAgo);
+    const gst = calculateGstFromInc(sample.amount);
+
+    await db.transaction.create({
+      data: {
+        businessId: business.id,
+        categoryId: categories["sales-revenue"],
+        date,
+        vendor: sample.vendor,
+        unitAmount: sample.amount,
+        quantity: 1,
+        totalAmount: sample.amount,
+        paymentMode: "EFTPOS",
+        amountExGst: gst.amountExGst,
+        gstAmount: gst.gstAmount,
+        amountIncGst: gst.amountIncGst,
+        gstType: "standard_15",
+        type: "income",
+        source: "manual",
+      },
+    });
+  }
+
   const totalRevenue = PRODUCTS.reduce((s, p) => s + p.revenue, 0);
   const totalExpenses = 25 * 120;
   const surplus = totalRevenue - totalExpenses;

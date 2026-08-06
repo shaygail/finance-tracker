@@ -76,7 +76,7 @@ export default async function GstReportPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Net GST Payable</p>
+            <p className="text-sm text-slate-500">Tax — Net GST Payable</p>
             <p className={`text-xl font-bold ${netGst >= 0 ? "text-red-600" : "text-emerald-600"}`}>
               {formatCurrency(Math.abs(netGst))}
               {netGst < 0 ? " refund" : ""}

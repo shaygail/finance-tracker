@@ -10,7 +10,7 @@ Works in the browser on desktop and phones. On mobile you can **Add to Home Scre
 - **Costing CSV import** — supports `costing(Purchase S).csv` with 4-bucket categories
 - **Mock Gmail inbox** — invoice list (production: Gmail OAuth)
 - **QR ingredient inventory** — scan + printable label sheet (camera-friendly on phones)
-- **Dashboard** — KPIs, best sellers, low-stock alerts
+- **Dashboard** — Revenue, Expenses, COGS, Tax (GST), and Income KPIs, best sellers, low-stock alerts
 - **GST report** — FY 2025/26, period breakdown, IRD due-date hints
 - **Savings goals** — tied to revenue − expenses surplus
 - **Team access** — owner + accountant roles, Resend invite flow

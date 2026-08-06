@@ -7,6 +7,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
+function typeBadgeVariant(
+  type: string
+): "success" | "default" | "warning" | "muted" {
+  if (type === "income" || type === "sale") return "success";
+  if (type === "refund") return "warning";
+  return "muted";
+}
+
 export default async function TransactionsPage() {
   const businessId = await getBusinessId();
 
@@ -40,11 +48,12 @@ export default async function TransactionsPage() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
                 <th className="px-6 py-3 font-medium">Date</th>
+                <th className="px-6 py-3 font-medium">Type</th>
                 <th className="px-6 py-3 font-medium">Vendor</th>
                 <th className="px-6 py-3 font-medium">Category</th>
                 <th className="px-6 py-3 font-medium">Payment</th>
                 <th className="px-6 py-3 font-medium text-right">Ex GST</th>
-                <th className="px-6 py-3 font-medium text-right">GST</th>
+                <th className="px-6 py-3 font-medium text-right">Tax</th>
                 <th className="px-6 py-3 font-medium text-right">Total</th>
                 <th className="px-6 py-3 font-medium">Source</th>
               </tr>
@@ -53,6 +62,9 @@ export default async function TransactionsPage() {
               {transactions.map((t) => (
                 <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50">
                   <td className="px-6 py-3 text-slate-600">{formatDate(t.date)}</td>
+                  <td className="px-6 py-3">
+                    <Badge variant={typeBadgeVariant(t.type)}>{t.type}</Badge>
+                  </td>
                   <td className="px-6 py-3 font-medium text-slate-900">{t.vendor}</td>
                   <td className="px-6 py-3">
                     {t.category ? (
