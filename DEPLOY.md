@@ -33,8 +33,6 @@ From your PC (use **public** DB URL from Postgres → Variables → `DATABASE_PU
 DATABASE_URL="postgresql://...proxy.rlwy.net..." npm run db:seed
 ```
 
-Demo login: `owner@stllhaus.co.nz` / `demo1234`
-
 Share the Railway `*.up.railway.app` link with your accountant.
 
 ---

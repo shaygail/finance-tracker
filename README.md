@@ -35,14 +35,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-### Demo logins
-
-| Role | Email | Password |
-|------|-------|----------|
-| Owner | `owner@stllhaus.co.nz` | `demo1234` |
-| Accountant | `accountant@stllhaus.co.nz` | `demo1234` |
+Open [http://localhost:3000](http://localhost:3000) and sign in with your owner or accountant account.
 
 ### Mobile
 

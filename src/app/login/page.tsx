@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { DEMO_CREDENTIALS, BUSINESS } from "@/lib/constants";
+import { BUSINESS } from "@/lib/constants";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,16 +13,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function loginWith(nextEmail: string, nextPassword: string) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setError("");
     setLoading(true);
-    setEmail(nextEmail);
-    setPassword(nextPassword);
 
     try {
       const result = await signIn("credentials", {
-        email: nextEmail,
-        password: nextPassword,
+        email: email.trim().toLowerCase(),
+        password,
         redirect: false,
       });
 
@@ -39,16 +38,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    await loginWith(email.trim().toLowerCase(), password);
-  }
-
-  async function quickLogin(role: "owner" | "accountant") {
-    const creds = DEMO_CREDENTIALS[role];
-    await loginWith(creds.email, creds.password);
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-4">
       <Card className="w-full max-w-md">
@@ -59,36 +48,7 @@ export default function LoginPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              Quick login
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                className="flex-1"
-                disabled={loading}
-                onClick={() => quickLogin("owner")}
-              >
-                {loading ? "Signing in..." : "Owner"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                disabled={loading}
-                onClick={() => quickLogin("accountant")}
-              >
-                {loading ? "Signing in..." : "Accountant"}
-              </Button>
-            </div>
-            <p className="text-xs text-slate-400">
-              Same accounts on local + production · password{" "}
-              <span className="font-mono">demo1234</span>
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4 border-t border-slate-100 pt-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -97,6 +57,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@business.co.nz"
+                autoComplete="email"
                 required
               />
             </div>
@@ -108,11 +69,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
                 required
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" variant="outline" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

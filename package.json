@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:setup-accounts": "npx tsx scripts/setup-accounts.ts",
     "db:migrate": "npx prisma migrate dev",
     "db:deploy": "npx prisma migrate deploy",
     "generate:xlsx": "npx tsx scripts/generate-sample-xlsx.ts",
