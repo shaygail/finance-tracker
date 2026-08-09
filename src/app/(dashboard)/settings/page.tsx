@@ -2,9 +2,10 @@ import { db } from "@/lib/db";
 import { getBusinessId, requireSession } from "@/lib/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Users, Database } from "lucide-react";
+import { Settings, Users, Database, Trash2 } from "lucide-react";
 import { InviteAccountantForm } from "@/components/settings/invite-form";
 import { PosSyncPanel } from "@/components/settings/pos-sync-panel";
+import { ResetFinanceDataPanel } from "@/components/settings/reset-finance-data-panel";
 import { getPosStatus } from "@/lib/pos/sync";
 
 export default async function SettingsPage() {
@@ -72,6 +73,7 @@ export default async function SettingsPage() {
         <CardContent>
           <PosSyncPanel
             configured={posStatus.configured}
+            syncEnabled={posStatus.syncEnabled}
             lastSyncedAt={posStatus.lastSyncedAt?.toISOString() ?? null}
             saleCount={posStatus.saleCount}
             lastLogStatus={posStatus.lastLog?.status}
@@ -79,6 +81,20 @@ export default async function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {session.user.role === "owner" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Reset finance data
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResetFinanceDataPanel />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

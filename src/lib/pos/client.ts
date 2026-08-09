@@ -1,5 +1,14 @@
 import { Pool, type QueryResultRow } from "pg";
-import { getPosConfig, type PosConfig } from "./config";
+import {
+  fetchPosProductsViaApi,
+  fetchPosSaleLinesViaApi,
+  fetchPosSalesViaApi,
+  testPosApiConnection,
+} from "./api-client";
+import { getPosConfig, getPosTransport, type PosConfig } from "./config";
+import type { PosProductRow, PosSaleLineRow, PosSaleRow } from "./types";
+
+export type { PosProductRow, PosSaleLineRow, PosSaleRow } from "./types";
 
 let pool: Pool | null = null;
 
@@ -19,6 +28,9 @@ export function getPosPool(): Pool {
 }
 
 export async function testPosConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (getPosTransport() === "api") {
+    return testPosApiConnection();
+  }
   try {
     const client = await getPosPool().connect();
     await client.query("SELECT 1");
@@ -27,29 +39,6 @@ export async function testPosConnection(): Promise<{ ok: boolean; error?: string
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Connection failed" };
   }
-}
-
-export interface PosProductRow {
-  id: string;
-  name: string;
-  sku: string | null;
-  price: number;
-}
-
-export interface PosSaleRow {
-  id: string;
-  soldAt: Date;
-  total: number;
-  payment: string | null;
-}
-
-export interface PosSaleLineRow {
-  saleId: string;
-  productId: string | null;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
 }
 
 function q(table: string, col: string): string {
@@ -79,6 +68,9 @@ function parseJsonItems(raw: unknown): PosSaleLineRow[] {
 }
 
 export async function fetchPosProducts(config: PosConfig = getPosConfig()): Promise<PosProductRow[]> {
+  if (getPosTransport() === "api") {
+    return fetchPosProductsViaApi();
+  }
   const { table, columns } = config.products;
   const sql = `
     SELECT
@@ -102,6 +94,9 @@ export async function fetchPosSales(
   since?: Date,
   config: PosConfig = getPosConfig()
 ): Promise<PosSaleRow[]> {
+  if (getPosTransport() === "api") {
+    return fetchPosSalesViaApi(since);
+  }
   const { table, columns } = config.sales;
   const tableName = t(table);
 
@@ -139,6 +134,10 @@ export async function fetchPosSaleLines(
   config: PosConfig = getPosConfig()
 ): Promise<PosSaleLineRow[]> {
   if (saleIds.length === 0) return [];
+
+  if (getPosTransport() === "api") {
+    return fetchPosSaleLinesViaApi(saleIds);
+  }
 
   if (config.linesSource === "json") {
     const { table, columns } = config.sales;

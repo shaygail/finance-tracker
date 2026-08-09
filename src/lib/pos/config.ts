@@ -153,6 +153,19 @@ export function getPosConfig(): PosConfig {
   return configFromEnvOverrides(base);
 }
 
+/** Public POS HTTP API base (e.g. https://stllhaus-pos-production.up.railway.app) */
+export function getPosApiUrl(): string | null {
+  const raw = process.env.POS_API_URL?.trim();
+  if (!raw) return null;
+  return raw.replace(/\/$/, "");
+}
+
 export function isPosConfigured(): boolean {
-  return Boolean(process.env.POS_DATABASE_URL);
+  return Boolean(getPosApiUrl() || process.env.POS_DATABASE_URL);
+}
+
+export function getPosTransport(): "api" | "database" | null {
+  if (getPosApiUrl()) return "api";
+  if (process.env.POS_DATABASE_URL) return "database";
+  return null;
 }

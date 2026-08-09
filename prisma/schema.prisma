@@ -25,6 +25,7 @@ model Business {
   gstFilingFrequency  String              @default("two_monthly")
   financialYearStart  String              @default("04-01")
   posLastSyncedAt     DateTime?
+  posSyncEnabled      Boolean             @default(true)
   createdAt           DateTime            @default(now())
   members             BusinessMember[]
   categories          Category[]
@@ -132,6 +133,7 @@ model Sale {
   businessId   String
   posSaleId    String
   soldAt       DateTime
+  customerName String?
   totalAmount  Float
   paymentMode  String     @default("Other")
   amountExGst  Float
@@ -154,6 +156,7 @@ model SaleLine {
   quantity     Float
   unitPrice    Float
   lineTotal    Float
+  notes        String?
   sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product      Product? @relation(fields: [productId], references: [id])
 }
@@ -180,6 +183,9 @@ model Invoice {
   vendor        String?
   status        String   @default("unmatched")
   attachmentUrl String?
+  fileName      String?
+  fileMime      String?
+  fileData      Bytes?
   business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   @@unique([businessId, externalId])
 }

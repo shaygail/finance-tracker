@@ -36,7 +36,7 @@ export default async function SalesReportPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Sales Report</h1>
           <p className="text-slate-500">
-            {business?.name} — POS sales data
+            {business?.name} — sales & order history
           </p>
         </div>
         {business?.posLastSyncedAt && (
@@ -50,13 +50,13 @@ export default async function SalesReportPage() {
         <Card>
           <CardContent className="py-8 text-center">
             <ShoppingCart className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            <p className="font-medium text-slate-700">No POS sales synced yet</p>
+            <p className="font-medium text-slate-700">No sales yet</p>
             <p className="mt-1 text-sm text-slate-500">
-              Connect your POS database in{" "}
+              Import a sales CSV or sync POS in{" "}
               <Link href="/settings" className="text-emerald-600 hover:underline">
                 Settings
-              </Link>{" "}
-              and run a sync to populate sales reports.
+              </Link>
+              .
             </p>
           </CardContent>
         </Card>
@@ -112,7 +112,7 @@ export default async function SalesReportPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Best sellers (from POS)</CardTitle>
+            <CardTitle>Best sellers</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-sm">
@@ -142,27 +142,39 @@ export default async function SalesReportPage() {
           <CardHeader>
             <CardTitle>Recent orders</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Items</th>
-                  <th className="px-4 py-3 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentSales.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-50">
-                    <td className="px-4 py-2 text-slate-600">{formatDate(s.soldAt)}</td>
-                    <td className="px-4 py-2 text-slate-600">{s.lines.length}</td>
-                    <td className="px-4 py-2 text-right font-medium text-slate-900">
-                      {formatCurrency(s.totalAmount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <CardContent className="space-y-4 p-4">
+            {recentSales.map((s) => (
+              <div key={s.id} className="rounded-lg border border-slate-100 p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {s.customerName || "Guest"} · {formatDate(s.soldAt)}
+                    </p>
+                    <p className="text-xs text-slate-500">{s.paymentMode}</p>
+                  </div>
+                  <p className="font-semibold text-slate-900">
+                    {formatCurrency(s.totalAmount)}
+                  </p>
+                </div>
+                <ul className="mt-2 space-y-1.5">
+                  {s.lines.map((line) => (
+                    <li key={line.id} className="text-sm">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-slate-800">
+                          {line.quantity}× {line.productName}
+                        </span>
+                        <span className="shrink-0 text-slate-700">
+                          {formatCurrency(line.lineTotal)}
+                        </span>
+                      </div>
+                      {line.notes && (
+                        <p className="text-xs text-slate-500">{line.notes}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>

@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
 import { calculateGstFromInc } from "@/lib/gst/nz";
 import { syncGoalsFromSurplus } from "@/lib/surplus";
+import { clearPosApiCache } from "./api-client";
 import {
   fetchPosProducts,
   fetchPosSales,
   fetchPosSaleLines,
   testPosConnection,
 } from "./client";
-import { isPosConfigured } from "./config";
+import { getPosTransport, isPosConfigured } from "./config";
 
 export interface PosSyncResult {
   ok: boolean;
@@ -20,7 +21,12 @@ export interface PosSyncResult {
 function normalizePayment(raw: string | null): string {
   if (!raw) return "Other";
   const lower = raw.toLowerCase();
-  if (lower.includes("card") || lower.includes("eftpos")) return "Card/EFTPOS";
+  if (lower.includes("uber")) return "Uber Eats";
+  if (lower.includes("afterpay")) return "Card/AfterPay";
+  if (lower.includes("bank")) return "Bank Transfer";
+  if (lower.includes("card") || lower.includes("eftpos") || lower.includes("visa")) {
+    return "Card/EFTPOS";
+  }
   if (lower.includes("cash")) return "Cash";
   if (lower.includes("debit")) return "Direct Debit";
   return raw;
@@ -32,9 +38,22 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       ok: false,
       productsSync: 0,
       salesSync: 0,
-      error: "POS_DATABASE_URL is not set. Add your POS Postgres connection string to .env",
+      error:
+        "POS is not configured. Set POS_API_URL (public POS app URL) or POS_DATABASE_URL in .env",
     };
   }
+
+  const business = await db.business.findUnique({ where: { id: businessId } });
+  if (business && business.posSyncEnabled === false) {
+    return {
+      ok: false,
+      productsSync: 0,
+      salesSync: 0,
+      error: "POS sync is disabled. Enable it in Settings to sync again.",
+    };
+  }
+
+  clearPosApiCache();
 
   const connection = await testPosConnection();
   if (!connection.ok) {
@@ -42,11 +61,10 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       ok: false,
       productsSync: 0,
       salesSync: 0,
-      error: connection.error ?? "Could not connect to POS database",
+      error: connection.error ?? "Could not connect to POS",
     };
   }
 
-  const business = await db.business.findUnique({ where: { id: businessId } });
   const since = business?.posLastSyncedAt ?? undefined;
 
   try {
@@ -129,11 +147,14 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       if (existing) continue;
 
       const gst = calculateGstFromInc(ps.total);
+      const lines = linesBySale.get(ps.id) ?? [];
+
       const sale = await db.sale.create({
         data: {
           businessId,
           posSaleId: ps.id,
           soldAt: ps.soldAt,
+          customerName: ps.customerName ?? null,
           totalAmount: ps.total,
           paymentMode: normalizePayment(ps.payment),
           amountExGst: gst.amountExGst,
@@ -143,21 +164,24 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         },
       });
 
-      const lines = linesBySale.get(ps.id) ?? [];
-      for (const line of lines) {
-        await db.saleLine.create({
-          data: {
+      if (lines.length > 0) {
+        await db.saleLine.createMany({
+          data: lines.map((line) => ({
             saleId: sale.id,
-            productId: line.productId ? productMap.get(line.productId) : null,
+            productId: line.productId ? productMap.get(line.productId) ?? null : null,
             posProductId: line.productId,
             productName: line.productName,
             quantity: line.quantity,
             unitPrice: line.unitPrice,
             lineTotal: line.lineTotal || line.quantity * line.unitPrice,
-          },
+            notes: line.notes ?? null,
+          })),
         });
       }
       salesSync++;
+      if (salesSync % 50 === 0) {
+        console.log(`  …imported ${salesSync} new sales`);
+      }
     }
 
     await recalculateProductStats(businessId);
@@ -167,6 +191,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       data: { posLastSyncedAt: new Date() },
     });
 
+    const transport = getPosTransport();
     await db.posSyncLog.create({
       data: {
         businessId,
@@ -174,15 +199,17 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         salesSync,
         status: "success",
         message: since
-          ? `Incremental sync since ${since.toISOString()}`
-          : "Full sync",
+          ? `Incremental ${transport} sync since ${since.toISOString()}`
+          : `Full ${transport} sync`,
       },
     });
 
     await syncGoalsFromSurplus(businessId);
+    clearPosApiCache();
 
     return { ok: true, productsSync, salesSync };
   } catch (e) {
+    clearPosApiCache();
     const error = e instanceof Error ? e.message : "Sync failed";
     await db.posSyncLog.create({
       data: {
@@ -226,6 +253,7 @@ export async function getPosStatus(businessId: string) {
 
   return {
     configured: isPosConfigured(),
+    syncEnabled: business?.posSyncEnabled !== false,
     lastSyncedAt: business?.posLastSyncedAt,
     lastLog,
     saleCount,
