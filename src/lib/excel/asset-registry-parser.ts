@@ -281,6 +281,10 @@ export function parseAssetRegistryBuffer(buffer: Buffer): AssetParseResult {
       resolvedDates[i] = draft.dateCandidates.date;
       continue;
     }
+    if (draft.dateCandidates.kind !== "ambiguous") {
+      resolvedDates[i] = null;
+      continue;
+    }
     const anchors: Date[] = [];
     for (let j = Math.max(0, i - 5); j <= Math.min(drafts.length - 1, i + 5); j++) {
       if (j === i) continue;

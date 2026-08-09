@@ -151,7 +151,7 @@ export async function addSupplierReceipt(formData: FormData) {
   const file = formData.get("file");
   let fileName: string | null = null;
   let fileMime: string | null = null;
-  let fileData: Buffer | null = null;
+  let fileData: Uint8Array<ArrayBuffer> | undefined;
 
   if (file instanceof File && file.size > 0) {
     if (file.size > 10 * 1024 * 1024) return { error: "File max 10 MB" };
@@ -164,8 +164,12 @@ export async function addSupplierReceipt(formData: FormData) {
       [".pdf", ".jpg", ".jpeg"].includes(ext);
     if (!ok) return { error: "Upload a JPEG or PDF receipt" };
     fileName = file.name;
-    fileMime = mime === "image/jpg" ? "image/jpeg" : mime || (ext === ".pdf" ? "application/pdf" : "image/jpeg");
-    fileData = Buffer.from(await file.arrayBuffer());
+    fileMime =
+      mime === "image/jpg"
+        ? "image/jpeg"
+        : mime || (ext === ".pdf" ? "application/pdf" : "image/jpeg");
+    // slice() yields a concrete ArrayBuffer (not SharedArrayBuffer) for Prisma Bytes
+    fileData = new Uint8Array((await file.arrayBuffer()).slice(0));
   }
 
   const receipt = await db.supplierReceipt.create({
@@ -177,7 +181,7 @@ export async function addSupplierReceipt(formData: FormData) {
       amount: parseFloatValue(formData.get("amount")),
       fileName,
       fileMime,
-      fileData: fileData ?? undefined,
+      fileData,
     },
   });
 
