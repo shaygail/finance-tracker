@@ -16,6 +16,7 @@ import {
   Upload,
   Plus,
   BarChart3,
+  Archive,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/transactions/new", label: "New Transaction", icon: Plus },
   { href: "/import", label: "Import Excel", icon: Upload },
+  { href: "/assets", label: "Asset Registry", icon: Archive },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/inventory/ingredients", label: "Ingredients", icon: Package },
   { href: "/inventory/scan", label: "Scan QR", icon: ScanLine },

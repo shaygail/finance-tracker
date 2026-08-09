@@ -39,6 +39,7 @@ model Business {
   savingsGoals        SavingsGoal[]
   categorisationRules CategorisationRule[]
   invites             BusinessInvite[]
+  assets              Asset[]
 }
 
 model BusinessMember {
@@ -84,6 +85,7 @@ model Transaction {
   business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   category     Category?   @relation(fields: [categoryId], references: [id])
   ingredient   Ingredient? @relation(fields: [ingredientId], references: [id])
+  assets       Asset[]
 }
 
 model Ingredient {
@@ -208,6 +210,28 @@ model SavingsGoal {
   deadline      DateTime?
   createdAt     DateTime  @default(now())
   business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id              String       @id @default(cuid())
+  businessId      String
+  name            String
+  description     String?
+  location        String?
+  model           String?
+  brand           String?
+  quantity        Float        @default(1)
+  datePurchased   DateTime
+  unitCost        Float
+  totalCost       Float
+  transactionId   String?
+  source          String       @default("csv")
+  createdAt       DateTime     @default(now())
+  business        Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transaction     Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, datePurchased])
+  @@index([businessId, name])
 }
 
 model CategorisationRule {
