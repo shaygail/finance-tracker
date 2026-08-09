@@ -34,25 +34,48 @@ function parseNumber(value: unknown): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
-/** Prefer NZ D/M/Y; if second part > 12 treat as M/D/Y (e.g. 3/28/2026). */
-export function parsePurchaseDate(value: unknown): Date | null {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+function utcDate(year: number, month: number, day: number): Date | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const probe = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
   }
+  return probe;
+}
+
+type DateCandidates =
+  | { kind: "definite"; date: Date }
+  | { kind: "ambiguous"; dmy: Date; mdy: Date }
+  | { kind: "invalid" };
+
+/** Resolve slash dates; ambiguous a/b/yyyy returns both NZ (D/M) and US (M/D) options. */
+export function purchaseDateCandidates(value: unknown): DateCandidates {
   if (typeof value === "number") {
     const date = XLSX.SSF.parse_date_code(value);
-    if (date) return new Date(date.y, date.m - 1, date.d);
+    if (!date) return { kind: "invalid" };
+    const d = utcDate(date.y, date.m, date.d);
+    return d ? { kind: "definite", date: d } : { kind: "invalid" };
   }
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
+
+  let trimmed = "";
+  if (typeof value === "string") trimmed = value.trim();
+  else if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const d = utcDate(value.getFullYear(), value.getMonth() + 1, value.getDate());
+    return d ? { kind: "definite", date: d } : { kind: "invalid" };
+  } else if (value != null) trimmed = String(value).trim();
+
+  if (!trimmed) return { kind: "invalid" };
 
   const m = trimmed.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (!m) {
     const d = new Date(trimmed);
-    return Number.isNaN(d.getTime())
-      ? null
-      : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (Number.isNaN(d.getTime())) return { kind: "invalid" };
+    const u = utcDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return u ? { kind: "definite", date: u } : { kind: "invalid" };
   }
 
   const a = parseInt(m[1], 10);
@@ -60,28 +83,43 @@ export function parsePurchaseDate(value: unknown): Date | null {
   let year = parseInt(m[3], 10);
   if (year < 100) year += 2000;
 
-  let day: number;
-  let month: number;
   if (b > 12) {
-    // M/D/Y e.g. 3/28/2026
-    month = a;
-    day = b;
-  } else if (a > 12) {
-    // D/M/Y e.g. 21/02/2026
-    day = a;
-    month = b;
-  } else {
-    // Ambiguous — NZ default D/M/Y
-    day = a;
-    month = b;
+    const d = utcDate(year, a, b); // M/D/Y
+    return d ? { kind: "definite", date: d } : { kind: "invalid" };
+  }
+  if (a > 12) {
+    const d = utcDate(year, b, a); // D/M/Y
+    return d ? { kind: "definite", date: d } : { kind: "invalid" };
   }
 
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  const d = new Date(year, month - 1, day);
-  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
-    return null;
+  const dmy = utcDate(year, b, a);
+  const mdy = utcDate(year, a, b);
+  if (dmy && mdy) {
+    if (dmy.getTime() === mdy.getTime()) return { kind: "definite", date: dmy };
+    return { kind: "ambiguous", dmy, mdy };
   }
-  return d;
+  if (dmy) return { kind: "definite", date: dmy };
+  if (mdy) return { kind: "definite", date: mdy };
+  return { kind: "invalid" };
+}
+
+/** Prefer NZ D/M/Y; if second part > 12 treat as M/D/Y (e.g. 3/28/2026). */
+export function parsePurchaseDate(value: unknown): Date | null {
+  const c = purchaseDateCandidates(value);
+  if (c.kind === "definite") return c.date;
+  if (c.kind === "ambiguous") return c.dmy; // NZ default when no neighbours
+  return null;
+}
+
+function pickAmbiguousDate(
+  dmy: Date,
+  mdy: Date,
+  anchors: Date[]
+): Date {
+  if (anchors.length === 0) return dmy;
+  const score = (d: Date) =>
+    Math.min(...anchors.map((a) => Math.abs(d.getTime() - a.getTime())));
+  return score(mdy) < score(dmy) ? mdy : dmy;
 }
 
 export function normalizeAssetKey(name: string): string {
@@ -90,9 +128,9 @@ export function normalizeAssetKey(name: string): string {
 
 export function sameCalendarDay(a: Date, b: Date): boolean {
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
   );
 }
 
@@ -123,9 +161,14 @@ function colIndex(headers: string[], ...candidates: string[]): number {
 }
 
 export function parseAssetRegistryBuffer(buffer: Buffer): AssetParseResult {
-  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+  const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false, raw: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+  // raw:true keeps CSV date strings (e.g. 5/3/2026) instead of US Excel serials
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: null,
+  });
   const errors: string[] = [];
   const rows: AssetRegistryRow[] = [];
   let skipped = 0;
@@ -161,6 +204,21 @@ export function parseAssetRegistryBuffer(buffer: Buffer): AssetParseResult {
     };
   }
 
+  type Draft = {
+    rowNumber: number;
+    name: string;
+    description: string | null;
+    location: string | null;
+    model: string | null;
+    brand: string | null;
+    quantity: number;
+    unitCost: number;
+    totalCost: number;
+    dateCandidates: DateCandidates;
+  };
+
+  const drafts: Draft[] = [];
+
   for (let i = headerIdx + 1; i < raw.length; i++) {
     const row = raw[i] as unknown[];
     if (!row || row.every((c) => c === null || c === undefined || String(c).trim() === "")) {
@@ -177,38 +235,96 @@ export function parseAssetRegistryBuffer(buffer: Buffer): AssetParseResult {
       continue;
     }
 
-    // Skip total / summary rows
-    if (/^total/i.test(name) || parseNumber(name) > 0 && !description && !model) {
+    if (/^total/i.test(name) || (parseNumber(name) > 0 && !description && !model)) {
       skipped += 1;
       continue;
     }
 
-    const datePurchased = parsePurchaseDate(row[cols.date]);
     const unitCost = parseNumber(row[cols.cost]);
     const quantity = cols.quantity >= 0 ? parseNumber(row[cols.quantity]) || 1 : 1;
+    if (unitCost <= 0) {
+      skipped += 1;
+      continue;
+    }
 
-    if (!datePurchased) {
+    const dateCandidates = purchaseDateCandidates(row[cols.date]);
+    if (dateCandidates.kind === "invalid") {
       errors.push(`Row ${i + 1}: missing or invalid Date of Purchase for “${name}”`);
       skipped += 1;
       continue;
     }
-    if (unitCost <= 0) {
-      // Allow free items? Skip zero-cost empty totals
-      skipped += 1;
-      continue;
-    }
 
-    rows.push({
+    drafts.push({
+      rowNumber: i + 1,
       name,
       description: description || null,
       location: cols.location >= 0 ? cell(row, cols.location) || null : null,
       model: model || null,
       brand: cols.brand >= 0 ? cell(row, cols.brand) || null : null,
       quantity,
-      datePurchased,
       unitCost,
       totalCost: Math.round(unitCost * quantity * 100) / 100,
-      rowNumber: i + 1,
+      dateCandidates,
+    });
+  }
+
+  // Definite dates act as anchors so ambiguous 5/2/2026 → May 2 near April rows,
+  // while 5/3/2026 → 5 March near February/March NZ-style rows.
+  const resolvedDates: Array<Date | null> = drafts.map((d) =>
+    d.dateCandidates.kind === "definite" ? d.dateCandidates.date : null
+  );
+
+  // Forward pass
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
+    if (draft.dateCandidates.kind === "definite") {
+      resolvedDates[i] = draft.dateCandidates.date;
+      continue;
+    }
+    const anchors: Date[] = [];
+    for (let j = Math.max(0, i - 5); j <= Math.min(drafts.length - 1, i + 5); j++) {
+      if (j === i) continue;
+      const a = resolvedDates[j];
+      if (a) anchors.push(a);
+    }
+    resolvedDates[i] = pickAmbiguousDate(
+      draft.dateCandidates.dmy,
+      draft.dateCandidates.mdy,
+      anchors
+    );
+  }
+
+  // Backward pass with peer resolutions
+  for (let i = drafts.length - 1; i >= 0; i--) {
+    const draft = drafts[i];
+    if (draft.dateCandidates.kind !== "ambiguous") continue;
+    const anchors: Date[] = [];
+    for (let j = Math.max(0, i - 5); j <= Math.min(drafts.length - 1, i + 5); j++) {
+      if (j === i) continue;
+      const a = resolvedDates[j];
+      if (a) anchors.push(a);
+    }
+    resolvedDates[i] = pickAmbiguousDate(
+      draft.dateCandidates.dmy,
+      draft.dateCandidates.mdy,
+      anchors
+    );
+  }
+
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
+    const datePurchased = resolvedDates[i]!;
+    rows.push({
+      name: draft.name,
+      description: draft.description,
+      location: draft.location,
+      model: draft.model,
+      brand: draft.brand,
+      quantity: draft.quantity,
+      datePurchased,
+      unitCost: draft.unitCost,
+      totalCost: draft.totalCost,
+      rowNumber: draft.rowNumber,
     });
   }
 

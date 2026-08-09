@@ -20,3 +20,14 @@ export function formatDate(date: Date | string): string {
     year: "numeric",
   }).format(d);
 }
+
+/** For date-only values stored at UTC noon/midnight (e.g. asset purchase dates). */
+export function formatDateUtc(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("en-NZ", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}

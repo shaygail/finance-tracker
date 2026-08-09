@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateUtc } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AssetRegistryUploader } from "@/components/assets/asset-registry-uploader";
 import { Archive } from "lucide-react";
@@ -82,7 +82,7 @@ export default async function AssetsPage() {
                       {[a.brand, a.model].filter(Boolean).join(" · ") || "—"}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {formatDate(a.datePurchased)}
+                      {formatDateUtc(a.datePurchased)}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600">{a.quantity}</td>
                     <td className="px-4 py-3 text-right text-slate-600">

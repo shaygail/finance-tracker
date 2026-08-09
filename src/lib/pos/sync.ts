@@ -9,6 +9,7 @@ import {
   testPosConnection,
 } from "./client";
 import { getPosTransport, isPosConfigured } from "./config";
+import { canonicalizeProductName } from "./product-aliases";
 
 export interface PosSyncResult {
   ok: boolean;
@@ -72,6 +73,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
     let productsSync = 0;
 
     for (const pp of posProducts) {
+      const name = canonicalizeProductName(pp.name);
       const existing = await db.product.findFirst({
         where: { businessId, posProductId: pp.id },
       });
@@ -80,7 +82,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         await db.product.update({
           where: { id: existing.id },
           data: {
-            name: pp.name,
+            name,
             sku: pp.sku,
             unitPrice: pp.price,
             lastSyncedAt: new Date(),
@@ -88,12 +90,16 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         });
       } else {
         const byName = await db.product.findFirst({
-          where: { businessId, name: pp.name },
+          where: {
+            businessId,
+            name: { equals: name, mode: "insensitive" },
+          },
         });
         if (byName) {
           await db.product.update({
             where: { id: byName.id },
             data: {
+              name,
               posProductId: pp.id,
               sku: pp.sku ?? byName.sku,
               unitPrice: pp.price,
@@ -105,7 +111,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
             data: {
               businessId,
               posProductId: pp.id,
-              name: pp.name,
+              name,
               sku: pp.sku,
               unitPrice: pp.price,
               lastSyncedAt: new Date(),
@@ -127,16 +133,49 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       linesBySale.set(line.saleId, list);
     }
 
-    const productMap = new Map(
-      (
-        await db.product.findMany({
-          where: { businessId },
-          select: { id: true, posProductId: true },
-        })
-      )
-        .filter((p) => p.posProductId)
-        .map((p) => [p.posProductId!, p.id])
-    );
+    const allProducts = await db.product.findMany({
+      where: { businessId },
+      select: { id: true, posProductId: true, name: true },
+    });
+
+    const productByPosId = new Map<string, string>();
+    const productByName = new Map<string, string>();
+    for (const p of allProducts) {
+      if (p.posProductId) productByPosId.set(p.posProductId, p.id);
+      productByName.set(p.name.trim().toLowerCase(), p.id);
+    }
+
+    async function resolveProductId(
+      posProductId: string | null,
+      productName: string,
+      unitPrice: number
+    ): Promise<{ productId: string | null; displayName: string }> {
+      const displayName = canonicalizeProductName(productName);
+      if (posProductId && productByPosId.has(posProductId)) {
+        return { productId: productByPosId.get(posProductId)!, displayName };
+      }
+      const key = displayName.trim().toLowerCase();
+      if (key && productByName.has(key)) {
+        return { productId: productByName.get(key)!, displayName };
+      }
+      if (!key) return { productId: null, displayName };
+
+      // Sale item ids (e.g. web-cc-003) often differ from menu ids — create/link by name
+      const created = await db.product.create({
+        data: {
+          businessId,
+          name: displayName,
+          posProductId: posProductId && !productByPosId.has(posProductId) ? posProductId : null,
+          unitPrice,
+          unitsSold: 0,
+          revenue: 0,
+          lastSyncedAt: new Date(),
+        },
+      });
+      productByName.set(key, created.id);
+      if (created.posProductId) productByPosId.set(created.posProductId, created.id);
+      return { productId: created.id, displayName };
+    }
 
     let salesSync = 0;
 
@@ -164,18 +203,23 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         },
       });
 
-      if (lines.length > 0) {
-        await db.saleLine.createMany({
-          data: lines.map((line) => ({
+      for (const line of lines) {
+        const { productId, displayName } = await resolveProductId(
+          line.productId,
+          line.productName,
+          line.unitPrice
+        );
+        await db.saleLine.create({
+          data: {
             saleId: sale.id,
-            productId: line.productId ? productMap.get(line.productId) ?? null : null,
+            productId,
             posProductId: line.productId,
-            productName: line.productName,
+            productName: displayName,
             quantity: line.quantity,
             unitPrice: line.unitPrice,
             lineTotal: line.lineTotal || line.quantity * line.unitPrice,
             notes: line.notes ?? null,
-          })),
+          },
         });
       }
       salesSync++;
@@ -184,6 +228,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       }
     }
 
+    await linkSaleLinesToProducts(businessId);
     await recalculateProductStats(businessId);
 
     await db.business.update({
@@ -222,13 +267,77 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
   }
 }
 
+async function linkSaleLinesToProducts(businessId: string): Promise<void> {
+  const products = await db.product.findMany({
+    where: { businessId },
+    select: { id: true, name: true, posProductId: true },
+  });
+  const byName = new Map(products.map((p) => [p.name.trim().toLowerCase(), p.id]));
+  const byPosId = new Map(
+    products.filter((p) => p.posProductId).map((p) => [p.posProductId!, p.id])
+  );
+
+  const unlinked = await db.saleLine.findMany({
+    where: { productId: null, sale: { businessId } },
+    select: {
+      id: true,
+      productName: true,
+      posProductId: true,
+      unitPrice: true,
+    },
+  });
+
+  for (const line of unlinked) {
+    const displayName = canonicalizeProductName(line.productName);
+    let productId =
+      (line.posProductId ? byPosId.get(line.posProductId) : undefined) ??
+      byName.get(displayName.trim().toLowerCase());
+
+    if (!productId) {
+      const name = displayName.trim();
+      if (!name) continue;
+      // Skip combo/manual labels that aren't real menu items
+      if (/[×+]/.test(name) || /^1x\s/i.test(name) || name.includes(",")) continue;
+
+      const created = await db.product.create({
+        data: {
+          businessId,
+          name,
+          posProductId:
+            line.posProductId && !byPosId.has(line.posProductId)
+              ? line.posProductId
+              : null,
+          unitPrice: line.unitPrice,
+          unitsSold: 0,
+          revenue: 0,
+        },
+      });
+      productId = created.id;
+      byName.set(name.toLowerCase(), productId);
+      if (created.posProductId) byPosId.set(created.posProductId, productId);
+    }
+
+    await db.saleLine.update({
+      where: { id: line.id },
+      data: { productId, productName: displayName },
+    });
+  }
+}
+
 async function recalculateProductStats(businessId: string): Promise<void> {
   const products = await db.product.findMany({ where: { businessId } });
 
   for (const product of products) {
     const agg = await db.saleLine.aggregate({
       where: {
-        productId: product.id,
+        OR: [
+          { productId: product.id },
+          {
+            productId: null,
+            productName: { equals: product.name, mode: "insensitive" },
+            sale: { businessId },
+          },
+        ],
       },
       _sum: { quantity: true, lineTotal: true },
     });

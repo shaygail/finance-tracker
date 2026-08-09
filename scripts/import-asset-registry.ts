@@ -12,7 +12,34 @@ import {
 } from "../src/lib/excel/asset-registry-parser";
 
 function dayStart(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0)
+  );
+}
+
+function isSameAssetRow(
+  existing: {
+    name: string;
+    model: string | null;
+    datePurchased: Date;
+    unitCost: number;
+    quantity: number;
+  },
+  row: {
+    name: string;
+    model: string | null;
+    datePurchased: Date;
+    unitCost: number;
+    quantity: number;
+  }
+): boolean {
+  return (
+    normalizeAssetKey(existing.name) === normalizeAssetKey(row.name) &&
+    normalizeAssetKey(existing.model ?? "") === normalizeAssetKey(row.model ?? "") &&
+    sameCalendarDay(existing.datePurchased, row.datePurchased) &&
+    moneyClose(existing.unitCost, row.unitCost) &&
+    Math.abs(existing.quantity - row.quantity) < 0.01
+  );
 }
 
 async function main() {
@@ -47,58 +74,40 @@ async function main() {
       process.exit(1);
     }
 
+    // Rebuild register from CSV so date fixes and repeat purchases apply cleanly
+    await db.asset.deleteMany({ where: { businessId: business.id } });
+
     const buffer = fs.readFileSync(filePath);
     const parsed = parseAssetRegistryBuffer(buffer);
-    console.log(`Parsed ${parsed.rows.length} asset rows (${parsed.skipped} empty skipped)`);
-    if (parsed.errors.length) {
-      console.log("Warnings:");
-      for (const e of parsed.errors) console.log(" -", e);
-    }
 
-    const existingAssets = await db.asset.findMany({
-      where: { businessId: business.id },
-    });
-    const purchases = await db.transaction.findMany({
-      where: { businessId: business.id, type: { in: ["expense", "refund"] } },
-    });
+    const existingAssets: Array<{
+      name: string;
+      model: string | null;
+      datePurchased: Date;
+      unitCost: number;
+      quantity: number;
+    }> = [];
 
     let imported = 0;
     let skipped = 0;
 
     for (const row of parsed.rows) {
-      const key = normalizeAssetKey(row.name);
       const purchased = dayStart(row.datePurchased);
-
-      const dupAsset = existingAssets.some(
-        (a) =>
-          normalizeAssetKey(a.name) === key &&
-          sameCalendarDay(a.datePurchased, row.datePurchased) &&
-          moneyClose(a.unitCost, row.unitCost) &&
-          Math.abs(a.quantity - row.quantity) < 0.01
+      const dup = existingAssets.some((a) =>
+        isSameAssetRow(a, {
+          name: row.name,
+          model: row.model,
+          datePurchased: row.datePurchased,
+          unitCost: row.unitCost,
+          quantity: row.quantity,
+        })
       );
-      if (dupAsset) {
+      if (dup) {
         skipped += 1;
         continue;
       }
 
-      const dupPurchase = purchases.some((t) => {
-        if (!sameCalendarDay(t.date, row.datePurchased)) return false;
-        const vendorKey = normalizeAssetKey(t.vendor);
-        const nameMatch =
-          vendorKey === key || vendorKey.includes(key) || key.includes(vendorKey);
-        if (!nameMatch) return false;
-        return (
-          moneyClose(t.unitAmount, row.unitCost) ||
-          moneyClose(t.totalAmount, row.totalCost) ||
-          moneyClose(t.totalAmount, row.unitCost)
-        );
-      });
-      if (dupPurchase) {
-        skipped += 1;
-        continue;
-      }
-
-      const created = await db.asset.create({
+      await db.asset.create({
         data: {
           businessId: business.id,
           name: row.name,
@@ -113,11 +122,34 @@ async function main() {
           source: "csv",
         },
       });
-      existingAssets.push(created);
+      existingAssets.push({
+        name: row.name,
+        model: row.model,
+        datePurchased: purchased,
+        unitCost: row.unitCost,
+        quantity: row.quantity,
+      });
       imported += 1;
     }
 
-    console.log(`Imported ${imported} assets, skipped ${skipped} duplicates`);
+    const stands = existingAssets.filter((a) =>
+      normalizeAssetKey(a.name).includes("display stand")
+    );
+    const squeezes = existingAssets.filter((a) =>
+      normalizeAssetKey(a.name).includes("squeeze")
+    );
+
+    console.log(`Imported ${imported} assets, skipped ${skipped} exact in-file duplicates`);
+    console.log(
+      "Display Stands:",
+      stands.map((s) => ({
+        qty: s.quantity,
+        date: s.datePurchased.toISOString().slice(0, 10),
+        unit: s.unitCost,
+      }))
+    );
+    console.log(`Squeeze Bottle rows: ${squeezes.length}`);
+    console.log(`Total assets: ${existingAssets.length}`);
   } finally {
     await db.$disconnect();
     await pool.end();

@@ -48,8 +48,8 @@ export function AssetRegistryUploader() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-sm text-slate-600">
             Expects columns: Name, Description, Location, Model, Brand, Quantity, Date of
-            Purchase, Cost per Unit. Rows that already exist (same name + purchase date +
-            cost) or match an existing purchase on that date are skipped.
+            Purchase, Cost per Unit. Repeat purchases of the same item (different dates or
+            models) are kept. Only exact duplicate lines are skipped on re-upload.
           </p>
           <label
             htmlFor="asset-file"

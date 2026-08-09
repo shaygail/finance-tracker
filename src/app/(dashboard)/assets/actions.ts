@@ -10,9 +10,35 @@ import {
   sameCalendarDay,
 } from "@/lib/excel/asset-registry-parser";
 
-function dayBounds(d: Date): { start: Date } {
-  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  return { start };
+function dayStart(d: Date): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0)
+  );
+}
+
+function isSameAssetRow(
+  existing: {
+    name: string;
+    model: string | null;
+    datePurchased: Date;
+    unitCost: number;
+    quantity: number;
+  },
+  row: {
+    name: string;
+    model: string | null;
+    datePurchased: Date;
+    unitCost: number;
+    quantity: number;
+  }
+): boolean {
+  return (
+    normalizeAssetKey(existing.name) === normalizeAssetKey(row.name) &&
+    normalizeAssetKey(existing.model ?? "") === normalizeAssetKey(row.model ?? "") &&
+    sameCalendarDay(existing.datePurchased, row.datePurchased) &&
+    moneyClose(existing.unitCost, row.unitCost) &&
+    Math.abs(existing.quantity - row.quantity) < 0.01
+  );
 }
 
 export async function importAssetRegistry(formData: FormData) {
@@ -35,20 +61,9 @@ export async function importAssetRegistry(formData: FormData) {
     where: { businessId },
     select: {
       name: true,
+      model: true,
       datePurchased: true,
       unitCost: true,
-      quantity: true,
-    },
-  });
-
-  const purchases = await db.transaction.findMany({
-    where: { businessId, type: { in: ["expense", "refund"] } },
-    select: {
-      id: true,
-      vendor: true,
-      date: true,
-      unitAmount: true,
-      totalAmount: true,
       quantity: true,
     },
   });
@@ -58,39 +73,21 @@ export async function importAssetRegistry(formData: FormData) {
   const warnings = [...parsed.errors];
 
   for (const row of parsed.rows) {
-    const key = normalizeAssetKey(row.name);
-    const { start } = dayBounds(row.datePurchased);
+    const purchased = dayStart(row.datePurchased);
 
-    const duplicateAsset = existingAssets.some(
-      (a) =>
-        normalizeAssetKey(a.name) === key &&
-        sameCalendarDay(a.datePurchased, row.datePurchased) &&
-        moneyClose(a.unitCost, row.unitCost) &&
-        Math.abs(a.quantity - row.quantity) < 0.01
+    // Skip only an exact same line (same name, model, purchase date, qty, cost).
+    // Different purchase dates are always new assets (e.g. Squeeze Bottle on Feb / Mar / May).
+    const duplicateAsset = existingAssets.some((a) =>
+      isSameAssetRow(a, {
+        name: row.name,
+        model: row.model,
+        datePurchased: purchased,
+        unitCost: row.unitCost,
+        quantity: row.quantity,
+      })
     );
 
     if (duplicateAsset) {
-      skipped += 1;
-      continue;
-    }
-
-    const matchingPurchase = purchases.find((t) => {
-      if (!sameCalendarDay(t.date, row.datePurchased)) return false;
-      const vendorKey = normalizeAssetKey(t.vendor);
-      const nameMatch =
-        vendorKey === key ||
-        vendorKey.includes(key) ||
-        key.includes(vendorKey);
-      if (!nameMatch) return false;
-      return (
-        moneyClose(t.unitAmount, row.unitCost) ||
-        moneyClose(t.totalAmount, row.totalCost) ||
-        moneyClose(t.totalAmount, row.unitCost)
-      );
-    });
-
-    // Same item already recorded as a purchase on that date — skip (no duplicate)
-    if (matchingPurchase) {
       skipped += 1;
       continue;
     }
@@ -104,7 +101,7 @@ export async function importAssetRegistry(formData: FormData) {
         model: row.model,
         brand: row.brand,
         quantity: row.quantity,
-        datePurchased: start,
+        datePurchased: purchased,
         unitCost: row.unitCost,
         totalCost: row.totalCost,
         source: "csv",
@@ -113,7 +110,8 @@ export async function importAssetRegistry(formData: FormData) {
 
     existingAssets.push({
       name: row.name,
-      datePurchased: start,
+      model: row.model,
+      datePurchased: purchased,
       unitCost: row.unitCost,
       quantity: row.quantity,
     });
