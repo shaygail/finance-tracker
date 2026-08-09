@@ -13,15 +13,16 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function loginWith(nextEmail: string, nextPassword: string) {
     setError("");
     setLoading(true);
+    setEmail(nextEmail);
+    setPassword(nextPassword);
 
     try {
       const result = await signIn("credentials", {
-        email,
-        password,
+        email: nextEmail,
+        password: nextPassword,
         redirect: false,
       });
 
@@ -30,7 +31,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Hard navigation — soft router.push can hang after Auth.js sets the cookie
       window.location.assign("/dashboard");
     } catch {
       setError("Sign in failed. Please try again.");
@@ -39,10 +39,14 @@ export default function LoginPage() {
     }
   }
 
-  function fillDemo(role: "owner" | "accountant") {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await loginWith(email.trim().toLowerCase(), password);
+  }
+
+  async function quickLogin(role: "owner" | "accountant") {
     const creds = DEMO_CREDENTIALS[role];
-    setEmail(creds.email);
-    setPassword(creds.password);
+    await loginWith(creds.email, creds.password);
   }
 
   return (
@@ -55,7 +59,36 @@ export default function LoginPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="mb-6 space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Quick login
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={loading}
+                onClick={() => quickLogin("owner")}
+              >
+                {loading ? "Signing in..." : "Owner"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={loading}
+                onClick={() => quickLogin("accountant")}
+              >
+                {loading ? "Signing in..." : "Accountant"}
+              </Button>
+            </div>
+            <p className="text-xs text-slate-400">
+              Same accounts on local + production · password{" "}
+              <span className="font-mono">demo1234</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 border-t border-slate-100 pt-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -78,41 +111,11 @@ export default function LoginPage() {
                 required
               />
             </div>
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <Button type="submit" variant="outline" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <div className="mt-6 space-y-2 border-t border-slate-100 pt-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              Demo accounts
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => fillDemo("owner")}
-              >
-                Owner
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => fillDemo("accountant")}
-              >
-                Accountant
-              </Button>
-            </div>
-            <p className="text-xs text-slate-400">
-              Password: demo1234
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
