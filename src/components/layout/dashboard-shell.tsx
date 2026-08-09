@@ -6,7 +6,13 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  isOwner = false,
+}: {
+  children: React.ReactNode;
+  isOwner?: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const [navPath, setNavPath] = useState(pathname);
@@ -28,7 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-slate-50">
-      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} isOwner={isOwner} />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">

@@ -6,7 +6,11 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireSession();
+  const session = await requireSession();
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <DashboardShell isOwner={session.user.role === "owner"}>
+      {children}
+    </DashboardShell>
+  );
 }

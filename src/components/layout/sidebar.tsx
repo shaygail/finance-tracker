@@ -17,6 +17,7 @@ import {
   Plus,
   BarChart3,
   Archive,
+  ClipboardCheck,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,16 +37,19 @@ const navItems = [
   { href: "/reports/sales", label: "Sales Report", icon: BarChart3 },
   { href: "/goals", label: "Savings Goals", icon: Target },
   { href: "/reports/gst", label: "GST Report", icon: FileSpreadsheet },
+  { href: "/compliance", label: "Council / FCP", icon: ClipboardCheck, ownerOnly: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
+  isOwner?: boolean;
 }
 
-export function Sidebar({ open = false, onClose }: SidebarProps) {
+export function Sidebar({ open = false, onClose, isOwner = false }: SidebarProps) {
   const pathname = usePathname();
+  const visibleItems = navItems.filter((item) => !item.ownerOnly || isOwner);
 
   return (
     <>
@@ -80,7 +84,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </button>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleItems.map(({ href, label, icon: Icon }) => {
             const active =
               pathname === href ||
               (href !== "/dashboard" && pathname.startsWith(href));

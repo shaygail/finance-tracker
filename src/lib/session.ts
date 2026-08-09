@@ -13,6 +13,14 @@ export async function requireSession() {
   return session;
 }
 
+export async function requireOwner() {
+  const session = await requireSession();
+  if (session.user.role !== "owner") {
+    redirect("/dashboard");
+  }
+  return session;
+}
+
 export async function getBusinessId(): Promise<string> {
   const session = await requireSession();
   return session.user.businessId;

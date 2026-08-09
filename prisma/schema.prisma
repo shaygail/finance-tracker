@@ -40,6 +40,12 @@ model Business {
   categorisationRules CategorisationRule[]
   invites             BusinessInvite[]
   assets              Asset[]
+  tempLogs            TempLog[]
+  thermometerChecks   ThermometerCalibration[]
+  cleaningChecklists  CleaningChecklist[]
+  supplierReceipts    SupplierReceipt[]
+  trainingSignOffs    TrainingSignOff[]
+  allergenItems       AllergenItem[]
 }
 
 model BusinessMember {
@@ -232,6 +238,103 @@ model Asset {
 
   @@index([businessId, datePurchased])
   @@index([businessId, name])
+}
+
+/** Milk/chiller or transport temperature log for FCP / council evidence */
+model TempLog {
+  id            String   @id @default(cuid())
+  businessId    String
+  kind          String   // milk_chiller | transport
+  loggedAt      DateTime
+  location      String   // e.g. Cart fridge, Home fridge, Chilly bin
+  temperatureC  Float
+  notes         String?
+  recordedBy    String?
+  createdAt     DateTime @default(now())
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, kind, loggedAt])
+}
+
+model ThermometerCalibration {
+  id           String   @id @default(cuid())
+  businessId   String
+  calibratedAt DateTime
+  method       String   // ice_slurry | boiling_water
+  readingC     Float
+  passed       Boolean  @default(true)
+  notes        String?
+  recordedBy   String?
+  createdAt    DateTime @default(now())
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, calibratedAt])
+}
+
+model CleaningChecklist {
+  id          String   @id @default(cuid())
+  businessId  String
+  cleanedAt   DateTime
+  benches     Boolean  @default(false)
+  milkJugs    Boolean  @default(false)
+  steamWands  Boolean  @default(false)
+  notes       String?
+  recordedBy  String?
+  createdAt   DateTime @default(now())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, cleanedAt])
+}
+
+model SupplierReceipt {
+  id          String   @id @default(cuid())
+  businessId  String
+  purchasedAt DateTime
+  supplier    String
+  items       String
+  amount      Float?
+  fileName    String?
+  fileMime    String?
+  fileData    Bytes?
+  createdAt   DateTime @default(now())
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, purchasedAt])
+}
+
+model TrainingSignOff {
+  id              String   @id @default(cuid())
+  businessId      String
+  personName      String
+  personRole      String   @default("owner")
+  signedAt        DateTime
+  acknowledgedFcp Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, signedAt])
+}
+
+model AllergenItem {
+  id             String   @id @default(cuid())
+  businessId     String
+  productName    String
+  containsGluten Boolean  @default(false)
+  containsDairy  Boolean  @default(false)
+  containsSoy    Boolean  @default(false)
+  containsEgg    Boolean  @default(false)
+  containsPeanut Boolean  @default(false)
+  containsTreeNut Boolean @default(false)
+  containsFish   Boolean  @default(false)
+  containsShellfish Boolean @default(false)
+  containsSesame Boolean  @default(false)
+  containsSulphites Boolean @default(false)
+  notes          String?
+  createdAt      DateTime @default(now())
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, productName])
 }
 
 model CategorisationRule {
