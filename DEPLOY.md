@@ -19,7 +19,6 @@ Easiest path: run the **Next.js app on Railway** next to Postgres.
 | `AUTH_SECRET` | long random string |
 | `NEXTAUTH_SECRET` | same as `AUTH_SECRET` |
 | `NEXTAUTH_URL` | your Railway public URL (`https://….up.railway.app`) — set after step 3 |
-| `MOCK_GMAIL` | `true` |
 
 3. **Settings → Networking → Public Networking** → generate domain  
 4. Set `NEXTAUTH_URL` to that `https://….up.railway.app` URL  
@@ -47,7 +46,7 @@ The **running app** still needs a reachable Postgres URL:
 
 1. Railway Postgres → Variables → copy **`DATABASE_PUBLIC_URL`** (`proxy.rlwy.net`)
 2. Vercel env `DATABASE_URL` = that public URL (**not** `.railway.internal`)
-3. Also set `AUTH_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `MOCK_GMAIL`
+3. Also set `AUTH_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 4. Run migrate once from your PC:
    ```bash
    DATABASE_URL="postgresql://...proxy.rlwy.net..." npm run db:deploy

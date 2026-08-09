@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: finance-tracker-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: finance_tracker
+    volumes:
+      - finance_tracker_pg:/var/lib/postgresql/data
+
+volumes:
+  finance_tracker_pg:

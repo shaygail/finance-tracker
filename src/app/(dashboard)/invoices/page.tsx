@@ -1,49 +1,26 @@
-import { Suspense } from "react";
 import { db } from "@/lib/db";
-import { getBusinessId, requireSession } from "@/lib/session";
+import { getBusinessId } from "@/lib/session";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Paperclip } from "lucide-react";
-import { getGmailStatus } from "@/lib/gmail/sync";
-import { GmailPanel } from "@/components/invoices/gmail-panel";
 
 export default async function InvoicesPage() {
-  const session = await requireSession();
   const businessId = await getBusinessId();
 
-  const [invoices, gmailStatus] = await Promise.all([
-    db.invoice.findMany({
-      where: { businessId },
-      orderBy: { receivedAt: "desc" },
-    }),
-    getGmailStatus(businessId),
-  ]);
-
-  const connected = gmailStatus.connections.length > 0;
+  const invoices = await db.invoice.findMany({
+    where: { businessId },
+    orderBy: { receivedAt: "desc" },
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
         <p className="text-slate-500">
-          {connected
-            ? `Gmail inbox — ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`
-            : `Inbox — ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""} (connect Gmail to sync real mail)`}
+          {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
         </p>
       </div>
-
-      <Suspense fallback={<div className="h-24 animate-pulse rounded-lg bg-slate-100" />}>
-        <GmailPanel
-          oauthConfigured={gmailStatus.oauthConfigured}
-          isOwner={session.user.role === "owner"}
-          connections={gmailStatus.connections.map((c) => ({
-            id: c.id,
-            email: c.email,
-            lastSyncedAt: c.lastSyncedAt?.toISOString() ?? null,
-          }))}
-        />
-      </Suspense>
 
       <Card>
         <CardHeader>
@@ -77,9 +54,6 @@ export default async function InvoicesPage() {
                   <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-600">
                     <span>{formatDate(inv.receivedAt)}</span>
                     {inv.vendor && <span>Vendor: {inv.vendor}</span>}
-                    {inv.gmailEmail && (
-                      <span className="text-slate-400">via {inv.gmailEmail}</span>
-                    )}
                     {inv.amount != null && (
                       <span className="font-medium text-slate-900">
                         {formatCurrency(inv.amount)}
