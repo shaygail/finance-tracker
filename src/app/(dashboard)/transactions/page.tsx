@@ -104,8 +104,10 @@ export default async function TransactionsPage({
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
                   <th className="px-6 py-3 font-medium">Date</th>
-                  <th className="px-6 py-3 font-medium">Vendor</th>
+                  <th className="px-6 py-3 font-medium">Item / Vendor</th>
                   <th className="px-6 py-3 font-medium">Category</th>
+                  <th className="px-6 py-3 font-medium text-right">Qty</th>
+                  <th className="px-6 py-3 font-medium text-right">Unit</th>
                   <th className="px-6 py-3 font-medium">Payment</th>
                   {gstRegistered && (
                     <>
@@ -129,6 +131,12 @@ export default async function TransactionsPage({
                       ) : (
                         <span className="text-slate-400">—</span>
                       )}
+                    </td>
+                    <td className="px-6 py-3 text-right tabular-nums text-slate-700">
+                      {Number.isInteger(t.quantity) ? t.quantity : t.quantity.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-3 text-right tabular-nums text-slate-600">
+                      {formatCurrency(t.unitAmount)}
                     </td>
                     <td className="px-6 py-3 text-slate-600">{t.paymentMode}</td>
                     {gstRegistered && (
