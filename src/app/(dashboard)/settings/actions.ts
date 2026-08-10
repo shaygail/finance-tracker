@@ -102,3 +102,21 @@ export async function acceptInvite(formData: FormData) {
 
   return { error: null, success: true, email: invite.email };
 }
+
+export async function setGstRegistered(enabled: boolean) {
+  const session = await requireSession();
+  if (session.user.role !== "owner") {
+    return { error: "Only the owner can change GST registration status" };
+  }
+
+  await db.business.update({
+    where: { id: session.user.businessId },
+    data: { gstRegistered: enabled },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports/gst");
+  revalidatePath("/transactions");
+  return { ok: true };
+}

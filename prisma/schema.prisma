@@ -21,6 +21,7 @@ model Business {
   id                  String              @id @default(cuid())
   name                String
   gstNumber           String?
+  gstRegistered       Boolean             @default(false)
   balanceDate         String              @default("03-31")
   gstFilingFrequency  String              @default("two_monthly")
   financialYearStart  String              @default("04-01")

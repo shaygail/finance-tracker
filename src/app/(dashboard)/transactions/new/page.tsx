@@ -14,13 +14,20 @@ export default async function NewTransactionPage({
   const businessId = await getBusinessId();
   const { categoryId } = await searchParams;
 
-  const categories = await db.category.findMany({
-    where: { businessId, type: "expense" },
-    orderBy: { name: "asc" },
-  });
+  const [categories, business] = await Promise.all([
+    db.category.findMany({
+      where: { businessId, type: "expense" },
+      orderBy: { name: "asc" },
+    }),
+    db.business.findUnique({
+      where: { id: businessId },
+      select: { gstRegistered: true },
+    }),
+  ]);
 
   const defaultCategoryId =
     categoryId && categories.some((c) => c.id === categoryId) ? categoryId : "";
+  const gstRegistered = business?.gstRegistered ?? false;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -34,7 +41,11 @@ export default async function NewTransactionPage({
 
       <div>
         <h1 className="text-2xl font-bold text-slate-900">New Transaction</h1>
-        <p className="text-slate-500">Record a manual expense with GST calculation</p>
+        <p className="text-slate-500">
+          {gstRegistered
+            ? "Record a manual expense with GST calculation"
+            : "Record a manual expense"}
+        </p>
       </div>
 
       <Card>
@@ -46,6 +57,7 @@ export default async function NewTransactionPage({
             categories={categories.map((c) => ({ id: c.id, name: c.name }))}
             paymentModes={[...PAYMENT_MODES]}
             defaultCategoryId={defaultCategoryId}
+            gstRegistered={gstRegistered}
           />
         </CardContent>
       </Card>

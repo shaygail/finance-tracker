@@ -29,6 +29,7 @@ interface TransactionFormProps {
   paymentModes: string[];
   mode: "create" | "edit";
   initial?: TransactionFormValues;
+  gstRegistered?: boolean;
 }
 
 export function TransactionForm({
@@ -36,6 +37,7 @@ export function TransactionForm({
   paymentModes,
   mode,
   initial,
+  gstRegistered = false,
 }: TransactionFormProps) {
   const router = useRouter();
   const [unitAmount, setUnitAmount] = useState(initial?.unitAmount ?? "");
@@ -182,16 +184,27 @@ export function TransactionForm({
       </div>
 
       <div className="rounded-lg bg-slate-50 p-4">
-        <p className="mb-2 text-sm font-medium text-slate-700">GST Summary (15%)</p>
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-slate-500">Ex GST</p>
-            <p className="font-semibold text-slate-900">{formatCurrency(totals.amountExGst)}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">GST</p>
-            <p className="font-semibold text-slate-900">{formatCurrency(totals.gstAmount)}</p>
-          </div>
+        <p className="mb-2 text-sm font-medium text-slate-700">
+          {gstRegistered ? "GST Summary (15%)" : "Amount summary"}
+        </p>
+        {!gstRegistered && (
+          <p className="mb-3 text-xs text-slate-400">
+            Not GST registered — totals only. GST split is stored quietly for when you enable it.
+          </p>
+        )}
+        <div className={`grid gap-4 text-sm ${gstRegistered ? "grid-cols-3" : "grid-cols-1"}`}>
+          {gstRegistered && (
+            <>
+              <div>
+                <p className="text-slate-500">Ex GST</p>
+                <p className="font-semibold text-slate-900">{formatCurrency(totals.amountExGst)}</p>
+              </div>
+              <div>
+                <p className="text-slate-500">GST</p>
+                <p className="font-semibold text-slate-900">{formatCurrency(totals.gstAmount)}</p>
+              </div>
+            </>
+          )}
           <div>
             <p className="text-slate-500">Total</p>
             <p className="font-semibold text-emerald-700">{formatCurrency(totals.amountIncGst)}</p>

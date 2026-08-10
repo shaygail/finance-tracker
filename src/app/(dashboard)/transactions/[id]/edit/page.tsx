@@ -19,13 +19,17 @@ export default async function EditTransactionPage({
   const businessId = await getBusinessId();
   const { id } = await params;
 
-  const [transaction, categories] = await Promise.all([
+  const [transaction, categories, business] = await Promise.all([
     db.transaction.findFirst({
       where: { id, businessId },
     }),
     db.category.findMany({
       where: { businessId, type: "expense" },
       orderBy: { name: "asc" },
+    }),
+    db.business.findUnique({
+      where: { id: businessId },
+      select: { gstRegistered: true },
     }),
   ]);
 
@@ -55,6 +59,7 @@ export default async function EditTransactionPage({
             mode="edit"
             categories={categories.map((c) => ({ id: c.id, name: c.name }))}
             paymentModes={[...PAYMENT_MODES]}
+            gstRegistered={business?.gstRegistered ?? false}
             initial={{
               id: transaction.id,
               date: toDateInputValue(transaction.date),

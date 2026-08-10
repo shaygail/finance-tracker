@@ -6,18 +6,21 @@ interface NewTransactionFormProps {
   categories: Array<{ id: string; name: string }>;
   paymentModes: string[];
   defaultCategoryId?: string;
+  gstRegistered?: boolean;
 }
 
 export function NewTransactionForm({
   categories,
   paymentModes,
   defaultCategoryId = "",
+  gstRegistered = false,
 }: NewTransactionFormProps) {
   return (
     <TransactionForm
       mode="create"
       categories={categories}
       paymentModes={paymentModes}
+      gstRegistered={gstRegistered}
       initial={{
         date: new Date().toISOString().split("T")[0],
         vendor: "",

@@ -2,16 +2,24 @@ import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 import { getTotalRevenue, getBestSellers } from "@/lib/revenue";
+import {
+  getCurrentFinancialYearRange,
+  getPeriodForDate,
+  round2,
+  summariseGstPeriods,
+  type GstFilingFrequency,
+} from "@/lib/gst/nz";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts";
-import { AlertTriangle, TrendingDown, TrendingUp, Wallet, ShoppingCart } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Scale, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const businessId = await getBusinessId();
+  const { start, end, label: fyLabel } = getCurrentFinancialYearRange();
 
-  const [transactions, ingredients, business, totalRevenue, bestSellers, saleCount] =
+  const [transactions, ingredients, business, totalRevenue, bestSellers, saleCount, fySales] =
     await Promise.all([
       db.transaction.findMany({
         where: { businessId },
@@ -26,13 +34,39 @@ export default async function DashboardPage() {
       getTotalRevenue(businessId),
       getBestSellers(businessId, 5),
       db.sale.count({ where: { businessId } }),
+      db.sale.findMany({
+        where: { businessId, soldAt: { gte: start, lte: end } },
+        select: { soldAt: true, gstAmount: true },
+      }),
     ]);
 
   const totalExpenses = transactions
     .filter((t) => t.type === "expense" || t.type === "refund")
     .reduce((sum, t) => sum + t.totalAmount, 0);
 
-  const totalGstPaid = transactions.reduce((sum, t) => sum + t.gstAmount, 0);
+  const frequency = (business?.gstFilingFrequency ?? "two_monthly") as GstFilingFrequency;
+  const fyTransactions = transactions.filter((t) => t.date >= start && t.date <= end);
+  const gstPeriodRows = [
+    ...fyTransactions.map((t) => ({
+      date: t.date,
+      type: t.type,
+      gstAmount: t.gstAmount,
+    })),
+    ...fySales.map((s) => ({
+      date: s.soldAt,
+      type: "sale" as const,
+      gstAmount: s.gstAmount,
+    })),
+  ];
+  const periodSummaries = summariseGstPeriods(gstPeriodRows, fyLabel, frequency);
+  const currentPeriod = getPeriodForDate(new Date(), fyLabel, frequency);
+  const currentGst = periodSummaries.find((s) => s.period.id === currentPeriod?.id);
+  const gstToPay = currentGst?.netGst ?? round2(
+    fySales.reduce((s, x) => s + x.gstAmount, 0) -
+      fyTransactions
+        .filter((t) => t.type === "expense" || t.type === "refund")
+        .reduce((s, t) => s + t.gstAmount, 0)
+  );
 
   const expenseByCategory = transactions
     .filter((t) => (t.type === "expense" || t.type === "refund") && t.category)
@@ -96,19 +130,45 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-blue-100 p-3">
-              <Wallet className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Input GST (expenses)</p>
-              <p className="text-xl font-bold text-slate-900">
-                {formatCurrency(totalGstPaid)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {business?.gstRegistered ? (
+          <Link href="/reports/gst">
+            <Card className="h-full transition-colors hover:border-emerald-300">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <div className="rounded-lg bg-blue-100 p-3">
+                  <Scale className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">
+                    GST to pay{currentPeriod ? " (current period)" : ""}
+                  </p>
+                  <p
+                    className={`text-xl font-bold ${
+                      gstToPay >= 0 ? "text-red-600" : "text-emerald-600"
+                    }`}
+                  >
+                    {formatCurrency(Math.abs(gstToPay))}
+                    {gstToPay < 0 ? " refund" : ""}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Link href="/settings">
+            <Card className="h-full transition-colors hover:border-slate-300">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <div className="rounded-lg bg-slate-100 p-3">
+                  <Scale className="h-5 w-5 text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">GST</p>
+                  <p className="text-sm font-medium text-slate-700">Not registered</p>
+                  <p className="text-xs text-slate-400">Enable in Settings when ready</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="rounded-lg bg-amber-100 p-3">

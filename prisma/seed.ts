@@ -34,7 +34,7 @@ const INGREDIENTS = [
   { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "STLL-CREAM-002" },
   { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "STLL-OAT-003" },
   { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "STLL-UBE-004" },
-  { name: "Condensed Milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "STLL-COND-005" },
+  { name: "Highlander condensed milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "STLL-COND-005" },
   { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "STLL-COCO-006" },
   { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-BEANS-007" },
   { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "STLL-CUPS-008" },
@@ -55,6 +55,9 @@ const RULES = [
   { pattern: "otis", categorySlug: "cos" },
   { pattern: "matcha", categorySlug: "cos" },
   { pattern: "cup", categorySlug: "supplies" },
+  { pattern: "highlander condensed", categorySlug: "supplies" },
+  { pattern: "condensed milk", categorySlug: "supplies" },
+  { pattern: "jersey condensed", categorySlug: "supplies" },
   { pattern: "breville", categorySlug: "equipment-tools" },
   { pattern: "registration", categorySlug: "non-operating" },
 ];

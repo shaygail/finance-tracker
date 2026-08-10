@@ -36,7 +36,7 @@ const navItems = [
   { href: "/products", label: "Products", icon: ShoppingBag },
   { href: "/reports/sales", label: "Sales Report", icon: BarChart3 },
   { href: "/goals", label: "Savings Goals", icon: Target },
-  { href: "/reports/gst", label: "GST Report", icon: FileSpreadsheet },
+  { href: "/reports/gst", label: "GST / Tax", icon: FileSpreadsheet, requiresGst: true },
   { href: "/compliance", label: "Council / FCP", icon: ClipboardCheck, ownerOnly: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -45,11 +45,20 @@ interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
   isOwner?: boolean;
+  gstRegistered?: boolean;
 }
 
-export function Sidebar({ open = false, onClose, isOwner = false }: SidebarProps) {
+export function Sidebar({
+  open = false,
+  onClose,
+  isOwner = false,
+  gstRegistered = false,
+}: SidebarProps) {
   const pathname = usePathname();
-  const visibleItems = navItems.filter((item) => !item.ownerOnly || isOwner);
+  const visibleItems = navItems.filter(
+    (item) =>
+      (!item.ownerOnly || isOwner) && (!item.requiresGst || gstRegistered)
+  );
 
   return (
     <>

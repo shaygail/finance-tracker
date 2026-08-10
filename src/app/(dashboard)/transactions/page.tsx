@@ -17,11 +17,6 @@ export default async function TransactionsPage({
   const { categoryId: rawCategoryId } = await searchParams;
   const categoryId = rawCategoryId?.trim() || "";
 
-  const categories = await db.category.findMany({
-    where: { businessId, type: "expense" },
-    orderBy: { name: "asc" },
-  });
-
   const where =
     categoryId === "uncategorised"
       ? { businessId, categoryId: null }
@@ -29,11 +24,23 @@ export default async function TransactionsPage({
         ? { businessId, categoryId }
         : { businessId };
 
-  const transactions = await db.transaction.findMany({
-    where,
-    include: { category: true },
-    orderBy: { date: "desc" },
-  });
+  const [categories, business, transactions] = await Promise.all([
+    db.category.findMany({
+      where: { businessId, type: "expense" },
+      orderBy: { name: "asc" },
+    }),
+    db.business.findUnique({
+      where: { id: businessId },
+      select: { gstRegistered: true },
+    }),
+    db.transaction.findMany({
+      where,
+      include: { category: true },
+      orderBy: { date: "desc" },
+    }),
+  ]);
+
+  const gstRegistered = business?.gstRegistered ?? false;
 
   const selectedCategory =
     categoryId && categoryId !== "uncategorised"
@@ -100,8 +107,12 @@ export default async function TransactionsPage({
                   <th className="px-6 py-3 font-medium">Vendor</th>
                   <th className="px-6 py-3 font-medium">Category</th>
                   <th className="px-6 py-3 font-medium">Payment</th>
-                  <th className="px-6 py-3 font-medium text-right">Ex GST</th>
-                  <th className="px-6 py-3 font-medium text-right">GST</th>
+                  {gstRegistered && (
+                    <>
+                      <th className="px-6 py-3 font-medium text-right">Ex GST</th>
+                      <th className="px-6 py-3 font-medium text-right">GST</th>
+                    </>
+                  )}
                   <th className="px-6 py-3 font-medium text-right">Total</th>
                   <th className="px-6 py-3 font-medium">Source</th>
                   <th className="px-6 py-3 font-medium"> </th>
@@ -120,12 +131,16 @@ export default async function TransactionsPage({
                       )}
                     </td>
                     <td className="px-6 py-3 text-slate-600">{t.paymentMode}</td>
-                    <td className="px-6 py-3 text-right text-slate-600">
-                      {formatCurrency(t.amountExGst)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-slate-600">
-                      {formatCurrency(t.gstAmount)}
-                    </td>
+                    {gstRegistered && (
+                      <>
+                        <td className="px-6 py-3 text-right text-slate-600">
+                          {formatCurrency(t.amountExGst)}
+                        </td>
+                        <td className="px-6 py-3 text-right text-slate-600">
+                          {formatCurrency(t.gstAmount)}
+                        </td>
+                      </>
+                    )}
                     <td className="px-6 py-3 text-right font-medium text-slate-900">
                       {formatCurrency(t.totalAmount)}
                     </td>

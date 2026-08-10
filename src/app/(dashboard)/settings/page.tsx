@@ -2,10 +2,11 @@ import { db } from "@/lib/db";
 import { getBusinessId, requireSession } from "@/lib/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Users, Database, Trash2 } from "lucide-react";
+import { Settings, Users, Database, Trash2, Scale } from "lucide-react";
 import { InviteAccountantForm } from "@/components/settings/invite-form";
 import { PosSyncPanel } from "@/components/settings/pos-sync-panel";
 import { ResetFinanceDataPanel } from "@/components/settings/reset-finance-data-panel";
+import { GstRegistrationPanel } from "@/components/settings/gst-registration-panel";
 import { getPosStatus } from "@/lib/pos/sync";
 
 export default async function SettingsPage() {
@@ -60,6 +61,22 @@ export default async function SettingsPage() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Scale className="h-5 w-5 text-emerald-600" />
+            GST registration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GstRegistrationPanel
+            registered={business?.gstRegistered ?? false}
+            gstNumber={business?.gstNumber ?? null}
+            canEdit={session.user.role === "owner"}
+          />
         </CardContent>
       </Card>
 
