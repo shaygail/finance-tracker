@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getBusinessId } from "@/lib/session";
 import { formatCurrency } from "@/lib/utils";
 import { getTotalRevenue, getBestSellers } from "@/lib/revenue";
+import { getCupsSold } from "@/lib/cups";
+import { getSiomaiSold } from "@/lib/siomai";
 import {
   getCurrentFinancialYearRange,
   getPeriodForDate,
@@ -12,33 +14,52 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts";
-import { AlertTriangle, TrendingDown, TrendingUp, Scale, ShoppingCart } from "lucide-react";
+import {
+  AlertTriangle,
+  Coffee,
+  TrendingDown,
+  TrendingUp,
+  Scale,
+  ShoppingCart,
+  UtensilsCrossed,
+} from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const businessId = await getBusinessId();
   const { start, end, label: fyLabel } = getCurrentFinancialYearRange();
 
-  const [transactions, ingredients, business, totalRevenue, bestSellers, saleCount, fySales] =
-    await Promise.all([
-      db.transaction.findMany({
-        where: { businessId },
-        include: { category: true },
-        orderBy: { date: "desc" },
-      }),
-      db.ingredient.findMany({
-        where: { businessId },
-        orderBy: { name: "asc" },
-      }),
-      db.business.findUnique({ where: { id: businessId } }),
-      getTotalRevenue(businessId),
-      getBestSellers(businessId, 5),
-      db.sale.count({ where: { businessId } }),
-      db.sale.findMany({
-        where: { businessId, soldAt: { gte: start, lte: end } },
-        select: { soldAt: true, gstAmount: true },
-      }),
-    ]);
+  const [
+    transactions,
+    ingredients,
+    business,
+    totalRevenue,
+    bestSellers,
+    saleCount,
+    fySales,
+    cupsSold,
+    siomai,
+  ] = await Promise.all([
+    db.transaction.findMany({
+      where: { businessId },
+      include: { category: true },
+      orderBy: { date: "desc" },
+    }),
+    db.ingredient.findMany({
+      where: { businessId },
+      orderBy: { name: "asc" },
+    }),
+    db.business.findUnique({ where: { id: businessId } }),
+    getTotalRevenue(businessId),
+    getBestSellers(businessId, 5),
+    db.sale.count({ where: { businessId } }),
+    db.sale.findMany({
+      where: { businessId, soldAt: { gte: start, lte: end } },
+      select: { soldAt: true, gstAmount: true },
+    }),
+    getCupsSold(businessId),
+    getSiomaiSold(businessId),
+  ]);
 
   const totalExpenses = transactions
     .filter((t) => t.type === "expense" || t.type === "refund")
@@ -103,7 +124,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="flex items-center gap-4 pt-6">
             <div className="rounded-lg bg-emerald-100 p-3">
@@ -113,6 +134,37 @@ export default async function DashboardPage() {
               <p className="text-sm text-slate-500">Sales revenue</p>
               <p className="text-xl font-bold text-slate-900">
                 {formatCurrency(totalRevenue)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="rounded-lg bg-teal-100 p-3">
+              <Coffee className="h-5 w-5 text-teal-700" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Cups sold</p>
+              <p className="text-xl font-bold text-slate-900">
+                {cupsSold.toLocaleString("en-NZ")}
+              </p>
+              <p className="text-xs text-slate-400">Drinks only · no siomai or milk</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 pt-6">
+            <div className="rounded-lg bg-orange-100 p-3">
+              <UtensilsCrossed className="h-5 w-5 text-orange-700" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Siomai packs</p>
+              <p className="text-xl font-bold text-slate-900">
+                {siomai.packs.toLocaleString("en-NZ")}
+              </p>
+              <p className="text-xs text-slate-400">
+                {siomai.pieces.toLocaleString("en-NZ")} pieces ·{" "}
+                {formatCurrency(siomai.revenue)}
               </p>
             </div>
           </CardContent>
@@ -169,18 +221,95 @@ export default async function DashboardPage() {
             </Card>
           </Link>
         )}
-        <Card>
-          <CardContent className="flex items-center gap-4 pt-6">
-            <div className="rounded-lg bg-amber-100 p-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Low Stock Items</p>
-              <p className="text-xl font-bold text-slate-900">{lowStock.length}</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UtensilsCrossed className="h-5 w-5 text-orange-600" />
+            Siomai sales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {siomai.packs === 0 ? (
+            <p className="text-sm text-slate-400">No siomai packs sold yet</p>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg bg-orange-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Packs sold</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {siomai.packs.toLocaleString("en-NZ")}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-orange-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Pieces sold</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {siomai.pieces.toLocaleString("en-NZ")}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-orange-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Siomai revenue</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {formatCurrency(siomai.revenue)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-700">By pack size</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left text-slate-500">
+                        <th className="pb-2 font-medium">Size</th>
+                        <th className="pb-2 font-medium text-right">Packs</th>
+                        <th className="pb-2 font-medium text-right">Pieces</th>
+                        <th className="pb-2 font-medium text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {siomai.bySize.map((row) => (
+                        <tr key={row.size} className="border-b border-slate-50">
+                          <td className="py-2 font-medium text-slate-900">{row.label}</td>
+                          <td className="py-2 text-right text-slate-600">{row.packs}</td>
+                          <td className="py-2 text-right text-slate-600">{row.pieces}</td>
+                          <td className="py-2 text-right text-slate-900">
+                            {formatCurrency(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-700">Top siomai items</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left text-slate-500">
+                        <th className="pb-2 font-medium">Product</th>
+                        <th className="pb-2 font-medium text-right">Packs</th>
+                        <th className="pb-2 font-medium text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {siomai.topLines.map((row) => (
+                        <tr key={row.productName} className="border-b border-slate-50">
+                          <td className="py-2 font-medium text-slate-900">{row.productName}</td>
+                          <td className="py-2 text-right text-slate-600">{row.packs}</td>
+                          <td className="py-2 text-right text-slate-900">
+                            {formatCurrency(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {saleCount === 0 && (
         <Card className="border-emerald-200 bg-emerald-50/50">
