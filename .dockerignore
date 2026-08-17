@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+scripts/clear-demo-data.ts
+.DS_Store
+coverage
+agent-transcripts
+.cursor
