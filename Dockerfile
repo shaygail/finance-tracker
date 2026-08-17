@@ -5,8 +5,10 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     openssl ca-certificates python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-# Skip postinstall (prisma generate) — schema is not copied yet
-RUN npm ci --ignore-scripts
+# Schema must exist before postinstall (`prisma generate`)
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+RUN npm ci
 
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
@@ -14,9 +16,14 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/src/generated ./src/generated
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+# Prefer pg adapter during build (no real DB needed; pool connects lazily)
+ENV DATABASE_URL="postgresql://prisma:prisma@127.0.0.1:5432/prisma?schema=public"
+ENV AUTH_SECRET="build-time-placeholder"
+ENV NEXTAUTH_SECRET="build-time-placeholder"
+ENV NEXTAUTH_URL="http://localhost:3000"
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner

@@ -27,8 +27,14 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db;
-}
+/** Lazy so `next build` can import this module without opening a DB connection. */
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = globalForPrisma.prisma ?? createPrismaClient();
+    if (process.env.NODE_ENV !== "production") {
+      globalForPrisma.prisma = client;
+    }
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
