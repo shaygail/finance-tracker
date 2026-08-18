@@ -9,6 +9,7 @@ import {
 } from "@/lib/sales/channels";
 import { getSalesByPaymentMethod } from "@/lib/sales/payments";
 import { getRentalMarketFeesSummary } from "@/lib/fees/rental-market";
+import { getSubscriptionsSummary } from "@/lib/fees/subscriptions";
 import {
   getCurrentFinancialYearRange,
   getPeriodForDate,
@@ -30,6 +31,7 @@ import {
   Download,
   Store,
   Tent,
+  Repeat,
   TrendingDown,
   TrendingUp,
   Scale,
@@ -56,6 +58,7 @@ export default async function DashboardPage() {
     channels,
     payments,
     marketFees,
+    subscriptions,
   ] = await Promise.all([
     db.transaction.findMany({
       where: { businessId },
@@ -79,6 +82,7 @@ export default async function DashboardPage() {
     getSalesByChannel(businessId),
     getSalesByPaymentMethod(businessId),
     getRentalMarketFeesSummary(businessId),
+    getSubscriptionsSummary(businessId),
   ]);
 
   const totalExpenses = transactions
@@ -245,28 +249,52 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <Link href="/fees">
-        <Card className="transition-colors hover:border-amber-300">
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
-            <div className="flex items-center gap-4">
-              <div className="rounded-lg bg-amber-100 p-3">
-                <Tent className="h-5 w-5 text-amber-700" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/fees">
+          <Card className="h-full transition-colors hover:border-amber-300">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
+              <div className="flex items-center gap-4">
+                <div className="rounded-lg bg-amber-100 p-3">
+                  <Tent className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Rental / Market fees</p>
+                  <p className="text-xl font-bold text-slate-900">
+                    {formatCurrency(marketFees.total)}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {marketFees.count} entr{marketFees.count === 1 ? "y" : "ies"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-slate-500">Rental / Market fees</p>
-                <p className="text-xl font-bold text-slate-900">
-                  {formatCurrency(marketFees.total)}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {marketFees.count} entr{marketFees.count === 1 ? "y" : "ies"} ·
-                  tap to add stall or market hire
-                </p>
+              <span className="text-sm font-medium text-amber-800">Manage →</span>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/subscriptions">
+          <Card className="h-full transition-colors hover:border-sky-300">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
+              <div className="flex items-center gap-4">
+                <div className="rounded-lg bg-sky-100 p-3">
+                  <Repeat className="h-5 w-5 text-sky-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Subscriptions</p>
+                  <p className="text-xl font-bold text-slate-900">
+                    {formatCurrency(subscriptions.total)}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {subscriptions.count} entr
+                    {subscriptions.count === 1 ? "y" : "ies"} · domain, email,
+                    Cursor…
+                  </p>
+                </div>
               </div>
-            </div>
-            <span className="text-sm font-medium text-amber-800">Manage fees →</span>
-          </CardContent>
-        </Card>
-      </Link>
+              <span className="text-sm font-medium text-sky-800">Manage →</span>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
 
       <Card>
         <CardHeader>

@@ -69,6 +69,31 @@ function categoryHint(description: string): string | null {
   ) {
     return "Rental / Market fees";
   }
+  if (
+    /\bcursor\b/.test(d) ||
+    /\bdomain\b/.test(d) ||
+    /\bgodaddy\b/.test(d) ||
+    /\bnamecheap\b/.test(d) ||
+    /\bcloudflare\b/.test(d) ||
+    /\bworkspace\b/.test(d) ||
+    /\bgsuite\b/.test(d) ||
+    /\bmicrosoft 365\b/.test(d) ||
+    /\boffice 365\b/.test(d) ||
+    /\brailway\b/.test(d) ||
+    /\bvercel\b/.test(d) ||
+    /\bnetlify\b/.test(d) ||
+    /\bgithub\b/.test(d) ||
+    /\bopenai\b/.test(d) ||
+    /\bchatgpt\b/.test(d) ||
+    /\banthropic\b/.test(d) ||
+    /\bnotion\b/.test(d) ||
+    /\bcanva\b/.test(d) ||
+    /\badobe\b/.test(d) ||
+    /\bhosting\b/.test(d) ||
+    /\bsubscription\b/.test(d)
+  ) {
+    return "Subscriptions";
+  }
   if (/bidfood|taranaki milk|anchor|pak.?n.?save|woolworths|new world|fresh world|pinoy|ez asian|pack centre/.test(d)) {
     return "Cost of Goods Sold";
   }

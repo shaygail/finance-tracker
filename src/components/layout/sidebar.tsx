@@ -21,6 +21,7 @@ import {
   Landmark,
   CreditCard,
   Tent,
+  Repeat,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/bank-statements", label: "Bank statements", icon: Landmark },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/fees", label: "Rental / Market fees", icon: Tent },
+  { href: "/subscriptions", label: "Subscriptions", icon: Repeat },
   { href: "/assets", label: "Asset Registry", icon: Archive },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/inventory/ingredients", label: "Ingredients", icon: Package },

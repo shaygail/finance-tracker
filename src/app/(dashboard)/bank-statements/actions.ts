@@ -12,6 +12,7 @@ import { calculateGstFromInc } from "@/lib/gst/nz";
 import { suggestCategory } from "@/lib/categorisation";
 import { syncGoalsFromSurplus } from "@/lib/surplus";
 import { ensureRentalMarketFeesCategory } from "@/lib/fees/rental-market";
+import { ensureSubscriptionsCategory } from "@/lib/fees/subscriptions";
 import { revalidatePath } from "next/cache";
 
 const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
@@ -20,6 +21,7 @@ const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
   "Non Operating": "non-operating",
   "Equipment & Tools": "equipment-tools",
   "Rental / Market fees": "rental-market-fees",
+  Subscriptions: "subscriptions",
 };
 
 export type BankPreviewLine = {
@@ -49,6 +51,7 @@ export async function previewBankStatement(formData: FormData) {
   }
 
   await ensureRentalMarketFeesCategory(businessId);
+  await ensureSubscriptionsCategory(businessId);
 
   const buffer = Buffer.from(await file.arrayBuffer());
   let parsed;
