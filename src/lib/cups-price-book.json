@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-18T03:27:02.655Z",
+    "sources": [
+      "data/early-sales-prices.csv",
+      "data/detailed-sales-with-size.csv"
+    ],
+    "globalRegularPrices": [
+      8,
+      8.5
+    ],
+    "strawberryMatchaRegularPrices": [
+      10
+    ]
+  },
+  "book": {
+    "ube cream matcha": {
+      "8": "regular",
+      "9": "regular",
+      "10": "large",
+      "11": "large",
+      "10.5": "large",
+      "8.5": "regular",
+      "9.5": "regular",
+      "11.5": "large",
+      "20": "large",
+      "22": "large"
+    },
+    "twilight coconut cloud": {
+      "10": "large",
+      "10.5": "large",
+      "8.5": "regular"
+    },
+    "strawberry cloud matcha": {
+      "11": "regular",
+      "12": "regular",
+      "14": "large",
+      "16": "large"
+    },
+    "mango sea salt matcha": {
+      "11": "regular",
+      "12": "regular",
+      "13": "large",
+      "11.5": "regular"
+    },
+    "strawberry matcha": {
+      "10": "regular",
+      "11": "regular",
+      "12": "regular",
+      "13": "large"
+    },
+    "earl grey matcha": {
+      "8": "regular",
+      "9": "regular",
+      "10": "large",
+      "11": "large",
+      "8.5": "regular",
+      "10.5": "large"
+    },
+    "og matcha latte": {
+      "7": "regular",
+      "9": "large",
+      "10": "large",
+      "11": "large",
+      "7.5": "regular",
+      "9.5": "large",
+      "11.5": "large",
+      "8.5": "regular",
+      "10.5": "large"
+    },
+    "ube cream coldbrew latte": {
+      "8": "regular",
+      "8.5": "regular",
+      "10": "large",
+      "10.5": "large",
+      "11.5": "large"
+    },
+    "batirol latte": {
+      "10.5": "large",
+      "11.5": "large",
+      "9.5": "regular",
+      "12.5": "large"
+    },
+    "1.5l twilight": {
+      "23": "regular"
+    },
+    "biscoff latte": {
+      "12.5": "large",
+      "10.5": "large",
+      "10": "regular",
+      "9.5": "regular",
+      "8.5": "regular"
+    },
+    "black pearl coconut cloud": {
+      "8": "regular",
+      "10": "large",
+      "11": "large",
+      "10.5": "large",
+      "8.5": "regular"
+    },
+    "strawberry matcha (large, hot)": {
+      "13": "large"
+    },
+    "ube batirol cream": {
+      "10": "regular",
+      "11": "regular",
+      "12": "large",
+      "11.5": "large",
+      "9.5": "regular"
+    },
+    "hojicha latte": {
+      "9": "regular",
+      "8.5": "regular",
+      "10.5": "large"
+    },
+    "biscoff matcha": {
+      "9": "regular",
+      "10": "regular",
+      "11": "regular",
+      "12": "large"
+    },
+    "spanish latte": {
+      "8": "regular",
+      "9.5": "regular",
+      "8.5": "regular",
+      "10.5": "large"
+    },
+    "ube spanish latte": {
+      "9": "regular",
+      "11": "regular",
+      "12": "large",
+      "13": "large",
+      "11.5": "large",
+      "13.5": "large",
+      "9.5": "regular"
+    },
+    "iced latte": {
+      "8": "regular",
+      "7.5": "regular",
+      "11.5": "large"
+    },
+    "batirol cream": {
+      "8.5": "regular",
+      "9.5": "regular",
+      "10.5": "large",
+      "11.5": "large"
+    },
+    "twilight cream": {
+      "8.5": "regular",
+      "9.5": "regular",
+      "10.5": "large"
+    },
+    "strawberry hojicha": {
+      "10": "regular"
+    },
+    "clover coconut cloud": {
+      "8.5": "regular"
+    },
+    "ube latte": {
+      "9.5": "regular",
+      "8.5": "regular",
+      "10.5": "large",
+      "11.5": "large"
+    },
+    "black pearl cold brew latte": {
+      "8.5": "regular",
+      "10.5": "large"
+    },
+    "flat white": {
+      "6.5": "regular",
+      "8.5": "large"
+    },
+    "long black": {
+      "6.5": "regular",
+      "8.5": "large"
+    },
+    "americano": {
+      "5.5": "small",
+      "8.5": "large",
+      "6.5": "regular"
+    },
+    "black pearl latte": {
+      "10.5": "large",
+      "11.5": "large",
+      "8.5": "regular"
+    },
+    "1.5l black pearl cloud": {
+      "25": "regular"
+    },
+    "spanish latte cold brew": {
+      "7": "regular",
+      "8": "regular",
+      "10": "large",
+      "10.5": "large"
+    },
+    "clover cloud": {
+      "8": "regular"
+    },
+    "twilight cloud": {
+      "8": "regular",
+      "10": "large"
+    },
+    "ube matcha": {
+      "8": "regular"
+    },
+    "ube cream cold brew": {
+      "7": "regular",
+      "8": "regular",
+      "10": "large",
+      "10.5": "large"
+    },
+    "matcha latte": {
+      "7": "regular",
+      "7.5": "regular",
+      "8": "regular",
+      "10": "large"
+    },
+    "black pearl cold brew": {
+      "7": "regular",
+      "8": "regular",
+      "9": "large"
+    },
+    "black pearl cloud": {
+      "8": "regular",
+      "10": "large",
+      "11": "large"
+    },
+    "iced chocolate": {
+      "6": "regular"
+    },
+    "flavoured latte": {
+      "6.5": "regular"
+    },
+    "mocha": {
+      "10": "large"
+    },
+    "midnight cream": {
+      "12": "large"
+    },
+    "cold brew": {
+      "6": "regular",
+      "7": "regular",
+      "8": "regular"
+    },
+    "classic matcha": {
+      "7": "regular",
+      "9": "large"
+    },
+    "og cold brew": {
+      "8": "regular"
+    },
+    "biscoff matcha popup": {
+      "9": "regular",
+      "11": "large"
+    }
+  }
+}

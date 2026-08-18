@@ -6,6 +6,12 @@ const PRODUCT_NAME_ALIASES: Record<string, string> = {
   "twilight cloud": "Twilight Coconut Cloud",
   "twilight coco cloud": "Twilight Coconut Cloud",
   "twilight coconut cloud": "Twilight Coconut Cloud",
+  "black pearl cloud": "Black Pearl Coconut Cloud",
+  "clover cloud": "Clover Coconut Cloud",
+  "ube cream cold brew": "Ube Cream Coldbrew Latte",
+  "ube cream coldbrew": "Ube Cream Coldbrew Latte",
+  "bp cb": "Black Pearl Cold Brew",
+  "ube cb": "Ube Cream Cold Brew",
 };
 
 export function canonicalizeProductName(name: string): string {

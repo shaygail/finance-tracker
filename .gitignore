@@ -55,3 +55,6 @@ cookies.txt
 .claude/
 .windsurf/
 skills-lock.json
+
+# Raw sales CSVs (customer names) — keep local; price book is committed
+/data/*.csv
