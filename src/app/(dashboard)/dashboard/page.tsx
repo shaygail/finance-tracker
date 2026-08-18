@@ -5,6 +5,9 @@ import { getTotalRevenue, getBestSellers } from "@/lib/revenue";
 import { getCupsSold } from "@/lib/cups";
 import { getSiomaiSold } from "@/lib/siomai";
 import {
+  getSalesByChannel,
+} from "@/lib/sales/channels";
+import {
   getCurrentFinancialYearRange,
   getPeriodForDate,
   round2,
@@ -17,6 +20,8 @@ import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts"
 import {
   AlertTriangle,
   Coffee,
+  Download,
+  Store,
   TrendingDown,
   TrendingUp,
   Scale,
@@ -24,6 +29,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
   const businessId = await getBusinessId();
@@ -39,6 +45,7 @@ export default async function DashboardPage() {
     fySales,
     cupsSold,
     siomai,
+    channels,
   ] = await Promise.all([
     db.transaction.findMany({
       where: { businessId },
@@ -59,6 +66,7 @@ export default async function DashboardPage() {
     }),
     getCupsSold(businessId),
     getSiomaiSold(businessId),
+    getSalesByChannel(businessId),
   ]);
 
   const totalExpenses = transactions
@@ -228,9 +236,65 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coffee className="h-5 w-5 text-teal-700" />
-            Drink sales
+            <Store className="h-5 w-5 text-slate-700" />
+            Sales by channel
           </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {channels.totalOrders === 0 ? (
+            <p className="text-sm text-slate-400">No sales yet</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {channels.byChannel.map((row) => {
+                const tone =
+                  row.channel === "uber_eats"
+                    ? "bg-emerald-50"
+                    : row.channel === "online"
+                      ? "bg-sky-50"
+                      : "bg-amber-50";
+                const share =
+                  channels.totalRevenue > 0
+                    ? (row.revenue / channels.totalRevenue) * 100
+                    : 0;
+                return (
+                  <div key={row.channel} className={`rounded-lg ${tone} px-4 py-3`}>
+                    <p className="text-sm text-slate-500">{row.label}</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {formatCurrency(row.revenue)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {row.orders.toLocaleString("en-NZ")} orders
+                      {row.orders > 0
+                        ? ` · avg ${formatCurrency(row.avgOrderValue)}`
+                        : ""}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {share.toFixed(0)}% of sales revenue
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Coffee className="h-5 w-5 text-teal-700" />
+              Drink sales
+            </CardTitle>
+            {cupsSold.cups > 0 && (
+              <a href="/api/sales/export">
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export all sales
+                </Button>
+              </a>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {cupsSold.cups === 0 ? (
@@ -307,6 +371,34 @@ export default async function DashboardPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-slate-700">Top add-ons</p>
+                {cupsSold.topAddOns.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    No add-ons recorded yet (needs POS notes on drinks)
+                  </p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left text-slate-500">
+                        <th className="pb-2 font-medium">Add-on</th>
+                        <th className="pb-2 font-medium text-right">Times ordered</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cupsSold.topAddOns.map((row) => (
+                        <tr key={row.label} className="border-b border-slate-50">
+                          <td className="py-2 font-medium text-slate-900">{row.label}</td>
+                          <td className="py-2 text-right text-slate-600">
+                            {row.count.toLocaleString("en-NZ")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </>
           )}

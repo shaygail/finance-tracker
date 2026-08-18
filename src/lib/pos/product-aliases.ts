@@ -12,6 +12,9 @@ const PRODUCT_NAME_ALIASES: Record<string, string> = {
   "ube cream coldbrew": "Ube Cream Coldbrew Latte",
   "bp cb": "Black Pearl Cold Brew",
   "ube cb": "Ube Cream Cold Brew",
+  "matcha latte": "OG Matcha Latte",
+  "classic matcha": "OG Matcha Latte",
+  "og matcha": "OG Matcha Latte",
 };
 
 export function canonicalizeProductName(name: string): string {

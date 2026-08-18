@@ -45,9 +45,11 @@
     },
     "strawberry matcha": {
       "10": "regular",
+      "10.5": "regular",
       "11": "regular",
       "12": "regular",
-      "13": "large"
+      "13": "large",
+      "24": "large"
     },
     "earl grey matcha": {
       "8": "regular",

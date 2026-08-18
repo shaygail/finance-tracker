@@ -11,6 +11,7 @@ import {
 import { getPosTransport, isPosConfigured } from "./config";
 import { canonicalizeProductName } from "./product-aliases";
 import type { PosSaleLineRow } from "./types";
+import { classifySaleChannel } from "@/lib/sales/channels";
 
 export interface PosSyncResult {
   ok: boolean;
@@ -124,7 +125,9 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
     }
 
     // Older imports skipped customisation notes — one full pass when many lines lack them.
-    const [missingNotes, totalLines] = await Promise.all([
+    // Channel column defaults to stall — one full pass when Uber Eats payments aren't tagged yet
+    // (same pass also classifies online / stall from order descriptions).
+    const [missingNotes, totalLines, uberChannelMismatch] = await Promise.all([
       db.saleLine.count({
         where: {
           sale: { businessId },
@@ -132,10 +135,19 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         },
       }),
       db.saleLine.count({ where: { sale: { businessId } } }),
+      db.sale.count({
+        where: {
+          businessId,
+          paymentMode: "Uber Eats",
+          channel: { not: "uber_eats" },
+        },
+      }),
     ]);
     const needsNotesBackfill =
       totalLines > 0 && missingNotes / totalLines > 0.2;
-    const salesSince = needsNotesBackfill ? undefined : since;
+    const needsChannelBackfill = uberChannelMismatch > 0;
+    const salesSince =
+      needsNotesBackfill || needsChannelBackfill ? undefined : since;
     const posSales = await fetchPosSales(salesSince);
     const saleIds = posSales.map((s) => s.id);
     const posLines = await fetchPosSaleLines(saleIds);
@@ -199,14 +211,20 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
 
     let salesSync = 0;
     let notesBackfill = 0;
+    let channelBackfill = 0;
     const noteUpdates: Array<{ id: string; notes: string }> = [];
+    const channelUpdates: Array<{ id: string; channel: string }> = [];
 
     for (const ps of posSales) {
       const lines = linesBySale.get(ps.id) ?? [];
       const existing = existingByPosId.get(ps.id);
+      const channel = classifySaleChannel(ps.payment, ps.orderDescription);
 
       if (existing) {
         noteUpdates.push(...collectSaleLineNoteUpdates(existing.lines, lines));
+        if (existing.channel !== channel) {
+          channelUpdates.push({ id: existing.id, channel });
+        }
         continue;
       }
 
@@ -220,6 +238,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
           customerName: ps.customerName ?? null,
           totalAmount: ps.total,
           paymentMode: normalizePayment(ps.payment),
+          channel,
           amountExGst: gst.amountExGst,
           gstAmount: gst.gstAmount,
           amountIncGst: gst.amountIncGst,
@@ -265,6 +284,16 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       }
     }
 
+    for (let i = 0; i < channelUpdates.length; i += 100) {
+      const chunk = channelUpdates.slice(i, i + 100);
+      await Promise.all(
+        chunk.map((u) =>
+          db.sale.update({ where: { id: u.id }, data: { channel: u.channel } })
+        )
+      );
+      channelBackfill += chunk.length;
+    }
+
     await linkSaleLinesToProducts(businessId);
     await recalculateProductStats(businessId);
 
@@ -285,6 +314,7 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
             ? `Incremental ${transport} sync since ${salesSince.toISOString()}`
             : `Full ${transport} sync`,
           notesBackfill > 0 ? `updated add-ons on ${notesBackfill} lines` : null,
+          channelBackfill > 0 ? `updated channel on ${channelBackfill} sales` : null,
         ]
           .filter(Boolean)
           .join(" · "),

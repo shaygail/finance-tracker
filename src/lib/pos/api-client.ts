@@ -24,6 +24,7 @@ interface ApiSale {
   discount?: number | null;
   payment_method?: string | null;
   customer_name?: string | null;
+  description?: string | null;
 }
 
 let salesCache: ApiSale[] | null = null;
@@ -100,6 +101,7 @@ export async function fetchPosSalesViaApi(since?: Date): Promise<PosSaleRow[]> {
         total,
         payment: r.payment_method ? String(r.payment_method) : null,
         customerName: r.customer_name ? String(r.customer_name) : null,
+        orderDescription: r.description ? String(r.description) : null,
       } satisfies PosSaleRow;
     })
     .filter((r) => !Number.isNaN(r.soldAt.getTime()))

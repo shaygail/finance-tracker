@@ -121,6 +121,7 @@ export async function fetchPosSales(
       ${q(table, columns.soldAt)} AS sold_at,
       ${totalExpr} AS total,
       ${q(table, columns.payment)}::text AS payment
+      ${columns.description ? `, ${q(table, columns.description)}::text AS description` : ""}
     FROM "${tableName}"
   `;
   const params: unknown[] = [];
@@ -136,6 +137,7 @@ export async function fetchPosSales(
     soldAt: new Date(r.sold_at as string | Date),
     total: Number(r.total) || 0,
     payment: r.payment ? String(r.payment) : null,
+    orderDescription: r.description ? String(r.description) : null,
   }));
 }
 

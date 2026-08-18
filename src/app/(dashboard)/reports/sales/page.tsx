@@ -9,9 +9,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SalesTrendChart } from "@/components/reports/sales-trend-chart";
-import { BarChart3, ShoppingCart } from "lucide-react";
+import { BarChart3, Download, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { meaningfulSaleOptions } from "@/lib/sales/options";
+import {
+  SALE_CHANNEL_LABELS,
+  type SaleChannel,
+} from "@/lib/sales/channels";
+import { Button } from "@/components/ui/button";
 
 export default async function SalesReportPage() {
   const businessId = await getBusinessId();
@@ -33,18 +38,28 @@ export default async function SalesReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Sales Report</h1>
           <p className="text-slate-500">
             {business?.name} — sales & order history
           </p>
         </div>
-        {business?.posLastSyncedAt && (
-          <Badge variant="muted">
-            Synced {formatDate(business.posLastSyncedAt)}
-          </Badge>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {business?.posLastSyncedAt && (
+            <Badge variant="muted">
+              Synced {formatDate(business.posLastSyncedAt)}
+            </Badge>
+          )}
+          {hasPosSales && (
+            <a href="/api/sales/export">
+              <Button variant="outline" className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                Download CSV
+              </Button>
+            </a>
+          )}
+        </div>
       </div>
 
       {!hasPosSales && (
@@ -154,7 +169,11 @@ export default async function SalesReportPage() {
                     <p className="font-medium text-slate-900">
                       {s.customerName || "Guest"} · {formatDate(s.soldAt)}
                     </p>
-                    <p className="text-xs text-slate-500">{s.paymentMode}</p>
+                    <p className="text-xs text-slate-500">
+                      {SALE_CHANNEL_LABELS[s.channel as SaleChannel] ?? s.channel}
+                      {" · "}
+                      {s.paymentMode}
+                    </p>
                   </div>
                   <p className="font-semibold text-slate-900">
                     {formatCurrency(s.totalAmount)}

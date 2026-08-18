@@ -11,6 +11,8 @@ export interface PosSaleRow {
   total: number;
   payment: string | null;
   customerName?: string | null;
+  /** Full POS order text (includes __ORDER__ channel tags) */
+  orderDescription?: string | null;
 }
 
 export interface PosSaleLineRow {

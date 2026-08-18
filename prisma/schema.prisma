@@ -145,6 +145,8 @@ model Sale {
   customerName String?
   totalAmount  Float
   paymentMode  String     @default("Other")
+  /// uber_eats | online | stall
+  channel      String     @default("stall")
   amountExGst  Float
   gstAmount    Float
   amountIncGst Float
@@ -154,6 +156,7 @@ model Sale {
   lines        SaleLine[]
 
   @@unique([businessId, posSaleId])
+  @@index([businessId, channel])
 }
 
 model SaleLine {

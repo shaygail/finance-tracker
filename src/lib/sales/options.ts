@@ -19,3 +19,27 @@ export function parseSaleLineOptions(notes: string | null | undefined): string[]
 export function meaningfulSaleOptions(notes: string | null | undefined): string[] {
   return parseSaleLineOptions(notes).filter((part) => !/:\s*None\s*$/i.test(part));
 }
+
+/** Base build options — not counted as paid / notable add-ons. */
+const BASE_OPTION_KEYS = /^(size|temp|temperature|level|ice|sweetness)$/i;
+const DEFAULT_MILK = /^(whole|none|regular)$/i;
+
+/**
+ * Notable drink add-ons from POS notes (alt milk, foam, syrup, extras).
+ * Skips size/temp/ice defaults and "None" values.
+ */
+export function extractDrinkAddOns(notes: string | null | undefined): string[] {
+  const out: string[] = [];
+  for (const part of parseSaleLineOptions(notes)) {
+    if (/:\s*None\s*$/i.test(part)) continue;
+    const match = part.match(/^([^:]+):\s*(.+)$/);
+    if (!match) continue;
+    const key = match[1].trim();
+    const value = match[2].trim();
+    if (!value) continue;
+    if (BASE_OPTION_KEYS.test(key)) continue;
+    if (/^milk$/i.test(key) && DEFAULT_MILK.test(value)) continue;
+    out.push(`${key}: ${value}`.replace(/\s+/g, " "));
+  }
+  return out;
+}

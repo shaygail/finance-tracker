@@ -43,6 +43,7 @@ export const STLLHAUS_POS_CONFIG: PosConfig = {
       soldAt: "date",
       total: "subtotal",
       payment: "payment_method",
+      description: "description",
     },
   },
   saleLines: {

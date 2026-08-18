@@ -12,6 +12,7 @@
 
 import { db } from "@/lib/db";
 import { canonicalizeProductName } from "@/lib/pos/product-aliases";
+import { extractDrinkAddOns } from "@/lib/sales/options";
 import priceBookData from "@/lib/cups-price-book.json";
 
 type PriceBookFile = {
@@ -42,17 +43,24 @@ const OWNER_PRICE_OVERRIDES: Record<string, Record<string, MappedSize>> = {
   "black pearl coconut cloud": { "10": "large", "11": "large" },
   "iced chocolate": { "6": "regular" },
   "matcha latte": { "7.5": "regular", "7": "regular" },
+  "og matcha latte": { "7": "regular", "7.5": "regular", "9": "large" },
+  "classic matcha": { "7": "regular", "9": "large" },
   "flavoured latte": { "6.5": "regular" },
   americano: { "5.5": "small", "6.5": "regular" },
   "strawberry cloud matcha": { "11": "regular" },
+  "strawberry matcha": {
+    "10": "regular",
+    "10.5": "regular",
+    "11": "regular",
+    "12": "regular",
+    "24": "large",
+  },
   "twilight cream": { "9.5": "regular" },
   mocha: { "10": "large" },
   "biscoff latte": { "10": "regular" },
   "midnight cream": { "12": "large" },
   "spanish latte cold brew": { "7": "regular", "8": "regular" },
   "cold brew": { "6": "regular", "7": "regular", "8": "regular" },
-  "classic matcha": { "7": "regular", "9": "large" },
-  "og matcha latte": { "7": "regular", "9": "large" },
   "ube spanish latte": { "9": "regular", "12": "large" },
 };
 
@@ -62,14 +70,6 @@ function normDrinkKey(name: string): string {
 
 function rawDrinkKey(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function hasAltMilkAddOn(notes?: string | null): boolean {
-  if (!notes) return false;
-  return (
-    /\b(almond|oat|soy|macadamia|coconut)\s*milk\b/i.test(notes) ||
-    /\bMilk:\s*(Almond|Oat|Soy|Macadamia|Coconut)\b/i.test(notes)
-  );
 }
 
 function isMappedSize(value: unknown): value is MappedSize {
@@ -90,29 +90,26 @@ function lookupPriceSize(
 function sizeFromPriceBook(
   productName: string,
   unitPrice: number,
-  notes?: string | null
+  _notes?: string | null
 ): DrinkSize | null {
   const priceKey = String(Math.round(unitPrice * 100) / 100);
   const raw = rawDrinkKey(productName);
   const canonical = normDrinkKey(productName);
-  const isMatchaLatte = raw === "matcha latte" || canonical === "matcha latte";
+  const isOgMatchaFamily =
+    raw === "matcha latte" ||
+    raw === "classic matcha" ||
+    raw === "og matcha latte" ||
+    canonical === "og matcha latte";
 
-  // Classic Matcha uses OG Matcha Latte size prices ($7 Regular / $9 Large)
-  if (raw === "classic matcha" || canonical === "classic matcha") {
+  // OG Matcha Latte family (includes Matcha Latte / Classic Matcha)
+  if (isOgMatchaFamily) {
     return (
+      lookupPriceSize("og matcha latte", priceKey) ??
+      lookupPriceSize("matcha latte", priceKey) ??
       lookupPriceSize("classic matcha", priceKey) ??
-      lookupPriceSize("og matcha latte", priceKey)
+      lookupPriceSize(canonical, priceKey) ??
+      lookupPriceSize(raw, priceKey)
     );
-  }
-
-  // Matcha Latte: base $7 / $7.50 = Regular; alt-milk / other prices → OG Matcha Latte book
-  if (isMatchaLatte) {
-    const base = lookupPriceSize("matcha latte", priceKey);
-    if (base) return base;
-    if (hasAltMilkAddOn(notes) || (unitPrice > 7.6 && unitPrice < 20)) {
-      const og = lookupPriceSize("og matcha latte", priceKey);
-      if (og) return og;
-    }
   }
 
   return (
@@ -133,6 +130,10 @@ export interface CupsSummary {
     productName: string;
     cups: number;
     revenue: number;
+  }>;
+  topAddOns: Array<{
+    label: string;
+    count: number;
   }>;
 }
 
@@ -164,17 +165,117 @@ const EXCLUDE_PATTERNS: RegExp[] = [
   /\bgraham\b/i,
   /\bsip\s*&\s*bite\b/i,
   /\b1\.5l\b/i,
+  /^\s*strawberry\s*cream\s*$/i,
 ];
 
 export function isCupSaleItem(productName: string, sku?: string | null): boolean {
   const name = productName.trim();
   if (!name) return false;
+  if (/wrong\s+quantity/i.test(name)) return false;
 
   const haystack = `${name} ${sku ?? ""}`;
   for (const re of EXCLUDE_PATTERNS) {
     if (re.test(haystack) || re.test(name)) return false;
   }
   return true;
+}
+
+export type ComboDrinkPart = { name: string; quantity: number };
+
+/**
+ * Parse early POS combo ticket names that encode drink quantities, e.g.
+ * "Twilight Cloud ×2, Ube Cream Cold Brew ×1" or "Ube Cream Cold Brew 1x, Strawberry Cream".
+ */
+export function parseComboDrinkLine(productName: string): ComboDrinkPart[] | null {
+  const raw = productName.trim();
+  if (!raw || /wrong\s+quantity/i.test(raw)) return null;
+
+  // Require an explicit qty marker so "Drink (Large, Hot)" is not treated as a combo
+  const hasQtyMarker = /[×xX]\s*\d|\d+\s*[×xX]/.test(raw);
+  if (!hasQtyMarker) return null;
+
+  const parts = raw
+    .split(/\s*,\s*|\s+\+\s+|\s+and\s+/i)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const items: ComboDrinkPart[] = [];
+
+  for (const part of parts) {
+    let m =
+      part.match(/^(.+?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*$/) ||
+      part.match(/^(.+?)\s+(\d+(?:\.\d+)?)[xX]\s*$/);
+    if (m) {
+      items.push({ name: m[1].trim(), quantity: Number(m[2]) || 1 });
+      continue;
+    }
+    m = part.match(/^(\d+(?:\.\d+)?)\s*[×xX]\s*(.+)$/);
+    if (m) {
+      items.push({ name: m[2].trim(), quantity: Number(m[1]) || 1 });
+      continue;
+    }
+    if (parts.length > 1) {
+      items.push({ name: part, quantity: 1 });
+    }
+  }
+
+  // "1x A 2x B" without commas
+  if (items.length === 0) {
+    const re = /(\d+)\s*[×xX]\s*([^×x\d]+?)(?=(?:\d+\s*[×xX])|$)/gi;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(raw)) !== null) {
+      const name = match[2].trim().replace(/[,\s]+$/g, "");
+      if (name) items.push({ name, quantity: Number(match[1]) || 1 });
+    }
+  }
+
+  const cleaned = items.filter((i) => i.name && i.quantity > 0);
+  if (cleaned.length === 0) return null;
+  return cleaned;
+}
+
+type CupLineInput = {
+  productName: string;
+  quantity: number;
+  lineTotal: number;
+  unitPrice?: number | null;
+  sku?: string | null;
+  notes?: string | null;
+  siblingSize?: DrinkSize | null;
+  soldAt?: Date | null;
+};
+
+/** Expand combo ticket rows into one cup-line per drink × qty. */
+export function expandCupLines(lines: CupLineInput[]): CupLineInput[] {
+  const out: CupLineInput[] = [];
+
+  for (const line of lines) {
+    const combo = parseComboDrinkLine(line.productName);
+    if (!combo) {
+      out.push(line);
+      continue;
+    }
+
+    const ticketQty = Number(line.quantity) || 1;
+    const partsTotal = combo.reduce((s, c) => s + c.quantity, 0) || 1;
+    const lineTotal = Number(line.lineTotal) || 0;
+
+    for (const part of combo) {
+      const qty = part.quantity * ticketQty;
+      const share = part.quantity / partsTotal;
+      out.push({
+        ...line,
+        productName: part.name,
+        quantity: qty,
+        lineTotal: Math.round(lineTotal * share * ticketQty * 100) / 100,
+        // Avoid misleading blended unit prices for size lookup
+        unitPrice: null,
+        notes: line.notes,
+      });
+    }
+  }
+
+  return out;
 }
 
 /** Standalone POS size lines used before notes carried Size. */
@@ -264,6 +365,15 @@ export function classifyDrinkSize(
     }
   }
 
+  // Combo ticket parts have no per-drink price — early handwritten tickets were Regular base
+  if (!Number.isFinite(price) || price <= 0) {
+    const key = normDrinkKey(productName);
+    const raw = rawDrinkKey(productName);
+    if (PRICE_BOOK[key] || PRICE_BOOK[raw] || OWNER_PRICE_OVERRIDES[key] || OWNER_PRICE_OVERRIDES[raw]) {
+      return { size: "regular", label: "Regular" };
+    }
+  }
+
   return { size: "other", label: sizeLabel("other") };
 }
 
@@ -305,22 +415,25 @@ export function summariseCupsLines(
     { label: string; cups: number; revenue: number }
   >();
   const nameMap = new Map<string, { cups: number; revenue: number }>();
+  const addOnCounts = new Map<string, { label: string; count: number }>();
 
   let cups = 0;
   let revenue = 0;
 
-  for (const line of lines) {
+  for (const line of expandCupLines(lines)) {
     if (!isCupSaleItem(line.productName, line.sku)) continue;
     const qty = Number(line.quantity) || 0;
     const total = Number(line.lineTotal) || 0;
     const unitPrice =
-      Number(line.unitPrice) || (qty > 0 ? total / qty : 0) || 0;
+      line.unitPrice == null
+        ? NaN
+        : Number(line.unitPrice) || (qty > 0 ? total / qty : 0) || 0;
     const { size, label } = classifyDrinkSize(
       line.productName,
       line.notes,
       line.siblingSize,
       line.soldAt,
-      unitPrice
+      Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : null
     );
 
     cups += qty;
@@ -331,10 +444,18 @@ export function summariseCupsLines(
     cur.revenue += total;
     sizeMap.set(size, cur);
 
-    const byName = nameMap.get(line.productName) ?? { cups: 0, revenue: 0 };
+    const displayName = canonicalizeProductName(line.productName);
+    const byName = nameMap.get(displayName) ?? { cups: 0, revenue: 0 };
     byName.cups += qty;
     byName.revenue += total;
-    nameMap.set(line.productName, byName);
+    nameMap.set(displayName, byName);
+
+    for (const addOn of extractDrinkAddOns(line.notes)) {
+      const key = addOn.toLowerCase();
+      const existing = addOnCounts.get(key) ?? { label: addOn, count: 0 };
+      existing.count += qty;
+      addOnCounts.set(key, existing);
+    }
   }
 
   const order: DrinkSize[] = ["small", "regular", "large", "other"];
@@ -359,11 +480,20 @@ export function summariseCupsLines(
     .sort((a, b) => b.cups - a.cups)
     .slice(0, 8);
 
+  const topAddOns = Array.from(addOnCounts.values())
+    .map((v) => ({
+      label: v.label,
+      count: Math.round(v.count * 100) / 100,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   return {
     cups: Math.round(cups * 100) / 100,
     revenue: Math.round(revenue * 100) / 100,
     bySize,
     topLines,
+    topAddOns,
   };
 }
 
