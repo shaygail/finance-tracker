@@ -5,6 +5,24 @@
 
 import { db } from "@/lib/db";
 
+export type DrinkSize = "regular" | "large" | "other";
+
+export interface CupsSummary {
+  cups: number;
+  revenue: number;
+  bySize: Array<{
+    size: DrinkSize;
+    label: string;
+    cups: number;
+    revenue: number;
+  }>;
+  topLines: Array<{
+    productName: string;
+    cups: number;
+    revenue: number;
+  }>;
+}
+
 const EXCLUDE_PATTERNS: RegExp[] = [
   /\bsiomai\b/i,
   /\bpork\s*shrimp\b/i,
@@ -46,31 +64,127 @@ export function isCupSaleItem(productName: string, sku?: string | null): boolean
   return true;
 }
 
+/** Prefer Size from POS customisation notes; fall back to name hints. */
+export function classifyDrinkSize(
+  productName: string,
+  notes?: string | null
+): { size: DrinkSize; label: string } {
+  const fromNotes = notes?.match(/\bSize:\s*(Large|Regular|Venti|Grande)\b/i);
+  if (fromNotes) {
+    const raw = fromNotes[1].toLowerCase();
+    if (raw === "large" || raw === "venti" || raw === "grande") {
+      return { size: "large", label: "Large" };
+    }
+    if (raw === "regular") {
+      return { size: "regular", label: "Regular" };
+    }
+  }
+
+  const n = productName.toLowerCase();
+  if (/\blarge\b/.test(n) || /\bventi\b/.test(n) || /\bgrande\b/.test(n)) {
+    return { size: "large", label: "Large" };
+  }
+  if (/\bregular\b/.test(n) || /\btall\b/.test(n)) {
+    return { size: "regular", label: "Regular" };
+  }
+  return { size: "other", label: "Unspecified size" };
+}
+
+export function summariseCupsLines(
+  lines: Array<{
+    productName: string;
+    quantity: number;
+    lineTotal: number;
+    sku?: string | null;
+    notes?: string | null;
+  }>
+): CupsSummary {
+  const sizeMap = new Map<
+    DrinkSize,
+    { label: string; cups: number; revenue: number }
+  >();
+  const nameMap = new Map<string, { cups: number; revenue: number }>();
+
+  let cups = 0;
+  let revenue = 0;
+
+  for (const line of lines) {
+    if (!isCupSaleItem(line.productName, line.sku)) continue;
+    const qty = Number(line.quantity) || 0;
+    const total = Number(line.lineTotal) || 0;
+    const { size, label } = classifyDrinkSize(line.productName, line.notes);
+
+    cups += qty;
+    revenue += total;
+
+    const cur = sizeMap.get(size) ?? { label, cups: 0, revenue: 0 };
+    cur.cups += qty;
+    cur.revenue += total;
+    sizeMap.set(size, cur);
+
+    const byName = nameMap.get(line.productName) ?? { cups: 0, revenue: 0 };
+    byName.cups += qty;
+    byName.revenue += total;
+    nameMap.set(line.productName, byName);
+  }
+
+  const order: DrinkSize[] = ["regular", "large", "other"];
+  const bySize = order
+    .filter((s) => sizeMap.has(s))
+    .map((s) => {
+      const row = sizeMap.get(s)!;
+      return {
+        size: s,
+        label: row.label,
+        cups: Math.round(row.cups * 100) / 100,
+        revenue: Math.round(row.revenue * 100) / 100,
+      };
+    });
+
+  const topLines = Array.from(nameMap.entries())
+    .map(([productName, v]) => ({
+      productName,
+      cups: Math.round(v.cups * 100) / 100,
+      revenue: Math.round(v.revenue * 100) / 100,
+    }))
+    .sort((a, b) => b.cups - a.cups)
+    .slice(0, 8);
+
+  return {
+    cups: Math.round(cups * 100) / 100,
+    revenue: Math.round(revenue * 100) / 100,
+    bySize,
+    topLines,
+  };
+}
+
 export function sumCupsSold(
   lines: Array<{ productName: string; quantity: number; sku?: string | null }>
 ): number {
-  const total = lines.reduce((sum, line) => {
-    if (!isCupSaleItem(line.productName, line.sku)) return sum;
-    return sum + (Number(line.quantity) || 0);
-  }, 0);
-  return Math.round(total * 100) / 100;
+  return summariseCupsLines(
+    lines.map((l) => ({ ...l, lineTotal: 0, notes: null }))
+  ).cups;
 }
 
-/** Total drink cups sold (all-time from synced POS sale lines). */
-export async function getCupsSold(businessId: string): Promise<number> {
+/** Drink cups sold summary (all-time from synced POS sale lines). */
+export async function getCupsSold(businessId: string): Promise<CupsSummary> {
   const lines = await db.saleLine.findMany({
     where: { sale: { businessId } },
     select: {
       productName: true,
       quantity: true,
+      lineTotal: true,
+      notes: true,
       product: { select: { sku: true } },
     },
   });
 
-  return sumCupsSold(
+  return summariseCupsLines(
     lines.map((l) => ({
       productName: l.productName,
       quantity: l.quantity,
+      lineTotal: l.lineTotal,
+      notes: l.notes,
       sku: l.product?.sku ?? null,
     }))
   );

@@ -146,9 +146,11 @@ export default async function DashboardPage() {
             <div>
               <p className="text-sm text-slate-500">Cups sold</p>
               <p className="text-xl font-bold text-slate-900">
-                {cupsSold.toLocaleString("en-NZ")}
+                {cupsSold.cups.toLocaleString("en-NZ")}
               </p>
-              <p className="text-xs text-slate-400">Drinks only · no siomai or milk</p>
+              <p className="text-xs text-slate-400">
+                {formatCurrency(cupsSold.revenue)} drink revenue
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -222,6 +224,94 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coffee className="h-5 w-5 text-teal-700" />
+            Drink sales
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {cupsSold.cups === 0 ? (
+            <p className="text-sm text-slate-400">No drink cups sold yet</p>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg bg-teal-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Cups sold</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {cupsSold.cups.toLocaleString("en-NZ")}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-teal-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Drink revenue</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {formatCurrency(cupsSold.revenue)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-teal-50 px-4 py-3">
+                  <p className="text-sm text-slate-500">Avg per cup</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {formatCurrency(
+                      cupsSold.cups > 0 ? cupsSold.revenue / cupsSold.cups : 0
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-700">By size</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left text-slate-500">
+                        <th className="pb-2 font-medium">Size</th>
+                        <th className="pb-2 font-medium text-right">Cups</th>
+                        <th className="pb-2 font-medium text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cupsSold.bySize.map((row) => (
+                        <tr key={row.size} className="border-b border-slate-50">
+                          <td className="py-2 font-medium text-slate-900">{row.label}</td>
+                          <td className="py-2 text-right text-slate-600">{row.cups}</td>
+                          <td className="py-2 text-right text-slate-900">
+                            {formatCurrency(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-700">Top drinks</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-left text-slate-500">
+                        <th className="pb-2 font-medium">Product</th>
+                        <th className="pb-2 font-medium text-right">Cups</th>
+                        <th className="pb-2 font-medium text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cupsSold.topLines.map((row) => (
+                        <tr key={row.productName} className="border-b border-slate-50">
+                          <td className="py-2 font-medium text-slate-900">{row.productName}</td>
+                          <td className="py-2 text-right text-slate-600">{row.cups}</td>
+                          <td className="py-2 text-right text-slate-900">
+                            {formatCurrency(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
