@@ -26,20 +26,21 @@ const CATEGORIES = [
   { name: "Cost of Goods Sold", slug: "cos", type: "expense" },
   { name: "Non Operating", slug: "non-operating", type: "expense" },
   { name: "Equipment & Tools", slug: "equipment-tools", type: "expense" },
+  { name: "Rental / Market fees", slug: "rental-market-fees", type: "expense" },
   { name: "Sales Revenue", slug: "sales-revenue", type: "income" },
 ];
 
 const INGREDIENTS = [
-  { name: "Matcha (Thea)", unit: "g", parLevel: 500, currentStock: 180, qrCode: "STLL-MATCHA-001" },
-  { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "STLL-CREAM-002" },
-  { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "STLL-OAT-003" },
-  { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "STLL-UBE-004" },
-  { name: "Highlander condensed milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "STLL-COND-005" },
-  { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "STLL-COCO-006" },
-  { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-BEANS-007" },
-  { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "STLL-CUPS-008" },
-  { name: "Biscoff Spread", unit: "kg", parLevel: 2, currentStock: 0.8, qrCode: "STLL-BISC-009" },
-  { name: "Frozen Strawberries", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-STRAW-010" },
+  { name: "Matcha (Thea)", unit: "g", parLevel: 500, currentStock: 180, qrCode: "STLL-MATCHA-001", section: "drinks" },
+  { name: "Anchor Cream 2L", unit: "L", parLevel: 10, currentStock: 6, qrCode: "STLL-CREAM-002", section: "drinks" },
+  { name: "Otis Oat Milk", unit: "L", parLevel: 20, currentStock: 12, qrCode: "STLL-OAT-003", section: "drinks" },
+  { name: "Ube Extract", unit: "kg", parLevel: 3, currentStock: 1.5, qrCode: "STLL-UBE-004", section: "drinks" },
+  { name: "Highlander condensed milk", unit: "can", parLevel: 24, currentStock: 8, qrCode: "STLL-COND-005", section: "drinks" },
+  { name: "Coconut Water", unit: "L", parLevel: 12, currentStock: 4, qrCode: "STLL-COCO-006", section: "drinks" },
+  { name: "Coffee Beans", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-BEANS-007", section: "drinks" },
+  { name: "Clear Cups 500ml", unit: "pk", parLevel: 10, currentStock: 3, qrCode: "STLL-CUPS-008", section: "drinks" },
+  { name: "Biscoff Spread", unit: "kg", parLevel: 2, currentStock: 0.8, qrCode: "STLL-BISC-009", section: "drinks" },
+  { name: "Frozen Strawberries", unit: "kg", parLevel: 5, currentStock: 2, qrCode: "STLL-STRAW-010", section: "drinks" },
 ];
 
 const PRODUCTS = [
@@ -51,6 +52,13 @@ const PRODUCTS = [
 ];
 
 const RULES = [
+  { pattern: "stall fee", categorySlug: "rental-market-fees" },
+  { pattern: "stall", categorySlug: "rental-market-fees" },
+  { pattern: "market fee", categorySlug: "rental-market-fees" },
+  { pattern: "market hire", categorySlug: "rental-market-fees" },
+  { pattern: "rental", categorySlug: "rental-market-fees" },
+  { pattern: "site fee", categorySlug: "rental-market-fees" },
+  { pattern: "pitch fee", categorySlug: "rental-market-fees" },
   { pattern: "milklab", categorySlug: "supplies" },
   { pattern: "anchor", categorySlug: "supplies" },
   { pattern: "strawberry", categorySlug: "supplies" },

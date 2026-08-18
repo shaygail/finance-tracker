@@ -18,6 +18,9 @@ import {
   BarChart3,
   Archive,
   ClipboardCheck,
+  Landmark,
+  CreditCard,
+  Tent,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +32,9 @@ const navItems = [
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/transactions/new", label: "New Transaction", icon: Plus },
   { href: "/import", label: "Import Excel", icon: Upload },
+  { href: "/bank-statements", label: "Bank statements", icon: Landmark },
+  { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/fees", label: "Rental / Market fees", icon: Tent },
   { href: "/assets", label: "Asset Registry", icon: Archive },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/inventory/ingredients", label: "Ingredients", icon: Package },

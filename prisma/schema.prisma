@@ -47,6 +47,7 @@ model Business {
   supplierReceipts    SupplierReceipt[]
   trainingSignOffs    TrainingSignOff[]
   allergenItems       AllergenItem[]
+  bankStatements      BankStatement[]
 }
 
 model BusinessMember {
@@ -100,6 +101,8 @@ model Ingredient {
   businessId   String
   name         String
   unit         String
+  /// drinks | siomai | rnd
+  section      String        @default("drinks")
   parLevel     Float         @default(0)
   currentStock Float         @default(0)
   qrCode       String        @unique
@@ -107,6 +110,8 @@ model Ingredient {
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   stockCounts  StockCount[]
   transactions Transaction[]
+
+  @@index([businessId, section])
 }
 
 model StockCount {
@@ -361,4 +366,46 @@ model BusinessInvite {
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@unique([businessId, email])
+}
+
+model BankStatement {
+  id             String              @id @default(cuid())
+  businessId     String
+  filename       String
+  accountNumber  String?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  openingBalance Float?
+  closingBalance Float?
+  status         String              @default("draft")
+  createdAt      DateTime            @default(now())
+  business       Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  lines          BankStatementLine[]
+
+  @@index([businessId, createdAt])
+}
+
+model BankStatementLine {
+  id                   String        @id @default(cuid())
+  statementId          String
+  lineIndex            Int
+  date                 DateTime
+  txnType              String
+  description          String
+  withdrawal           Float?
+  deposit              Float?
+  balance              Float?
+  fingerprint          String
+  /// skip_income | skip_afterpay | skip | match_expense | new_expense | review
+  suggestedAction      String
+  suggestedCategoryId  String?
+  matchedTransactionId String?
+  matchNote            String?
+  /// pending | skipped | imported | linked
+  status               String        @default("pending")
+  appliedTransactionId String?
+  statement            BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@unique([statementId, lineIndex])
+  @@index([fingerprint])
 }

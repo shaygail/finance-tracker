@@ -13,6 +13,7 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
   "Cost of Goods Sold": "cos",
   "Non Operating": "non-operating",
   "Equipment & Tools": "equipment-tools",
+  "Rental / Market fees": "rental-market-fees",
 };
 
 function resolveCategoryId(

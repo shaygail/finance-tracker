@@ -10,7 +10,7 @@ export default async function PrintQrLabelsPage() {
 
   const ingredients = await db.ingredient.findMany({
     where: { businessId },
-    orderBy: { name: "asc" },
+    orderBy: [{ section: "asc" }, { name: "asc" }],
   });
 
   return (

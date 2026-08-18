@@ -7,6 +7,8 @@ import { getSiomaiSold } from "@/lib/siomai";
 import {
   getSalesByChannel,
 } from "@/lib/sales/channels";
+import { getSalesByPaymentMethod } from "@/lib/sales/payments";
+import { getRentalMarketFeesSummary } from "@/lib/fees/rental-market";
 import {
   getCurrentFinancialYearRange,
   getPeriodForDate,
@@ -16,12 +18,18 @@ import {
 } from "@/lib/gst/nz";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExpensePieChart, RevenueBarChart } from "@/components/dashboard/charts";
+import {
+  ExpensePieChart,
+  RevenueBarChart,
+  PaymentMethodBarChart,
+} from "@/components/dashboard/charts";
 import {
   AlertTriangle,
   Coffee,
+  CreditCard,
   Download,
   Store,
+  Tent,
   TrendingDown,
   TrendingUp,
   Scale,
@@ -46,6 +54,8 @@ export default async function DashboardPage() {
     cupsSold,
     siomai,
     channels,
+    payments,
+    marketFees,
   ] = await Promise.all([
     db.transaction.findMany({
       where: { businessId },
@@ -67,6 +77,8 @@ export default async function DashboardPage() {
     getCupsSold(businessId),
     getSiomaiSold(businessId),
     getSalesByChannel(businessId),
+    getSalesByPaymentMethod(businessId),
+    getRentalMarketFeesSummary(businessId),
   ]);
 
   const totalExpenses = transactions
@@ -232,6 +244,95 @@ export default async function DashboardPage() {
           </Link>
         )}
       </div>
+
+      <Link href="/fees">
+        <Card className="transition-colors hover:border-amber-300">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-4">
+              <div className="rounded-lg bg-amber-100 p-3">
+                <Tent className="h-5 w-5 text-amber-700" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Rental / Market fees</p>
+                <p className="text-xl font-bold text-slate-900">
+                  {formatCurrency(marketFees.total)}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {marketFees.count} entr{marketFees.count === 1 ? "y" : "ies"} ·
+                  tap to add stall or market hire
+                </p>
+              </div>
+            </div>
+            <span className="text-sm font-medium text-amber-800">Manage fees →</span>
+          </CardContent>
+        </Card>
+      </Link>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-teal-700" />
+              Payments
+            </CardTitle>
+            <Link href="/payments">
+              <Button variant="outline" size="sm">
+                Open payments & cash
+              </Button>
+            </Link>
+          </div>
+          {payments.topMethod && (
+            <p className="text-sm font-normal text-slate-500">
+              Highest: {payments.topMethod.label} (
+              {formatCurrency(payments.topMethod.revenue)},{" "}
+              {payments.topMethod.share.toFixed(0)}% of sales)
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          {payments.byMethod.length === 0 ? (
+            <p className="text-sm text-slate-400">
+              No sales yet — sync POS or add cash on the Payments page
+            </p>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <PaymentMethodBarChart
+                data={payments.byMethod.map((m) => ({
+                  name: m.label,
+                  revenue: Math.round(m.revenue * 100) / 100,
+                  orders: m.orders,
+                }))}
+              />
+              <div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-slate-500">
+                      <th className="pb-2 font-medium">Method</th>
+                      <th className="pb-2 font-medium text-right">Orders</th>
+                      <th className="pb-2 font-medium text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.byMethod.map((row) => (
+                      <tr key={row.bucket} className="border-b border-slate-50">
+                        <td className="py-2 font-medium text-slate-900">
+                          {row.label}
+                        </td>
+                        <td className="py-2 text-right text-slate-600">
+                          {row.orders}
+                        </td>
+                        <td className="py-2 text-right text-slate-900">
+                          {formatCurrency(row.revenue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

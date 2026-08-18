@@ -17,7 +17,14 @@ export default async function ImportPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Import Excel</h1>
-        <p className="text-slate-500">Upload transaction spreadsheets for bulk import</p>
+        <p className="text-slate-500">
+          Upload transaction spreadsheets for bulk import. For ANZ bank PDFs/CSV,
+          use{" "}
+          <a href="/bank-statements" className="text-emerald-600 hover:underline">
+            Bank statements
+          </a>{" "}
+          instead.
+        </p>
       </div>
 
       <ExcelUploader />
