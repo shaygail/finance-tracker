@@ -38,7 +38,8 @@ async function main() {
     }
 
     console.log(
-      `Done — ${result.productsSync} products, ${result.salesSync} new sales`
+      `Done — ${result.productsSync} products, ${result.salesSync} new sales` +
+        (result.message ? ` (${result.message})` : "")
     );
   } finally {
     await db.$disconnect();

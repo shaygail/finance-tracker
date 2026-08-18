@@ -49,6 +49,15 @@ function t(table: string): string {
   return table.replace(/"/g, "");
 }
 
+function notesFromDescription(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  return raw
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function parseJsonItems(raw: unknown): PosSaleLineRow[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item) => {
@@ -63,6 +72,7 @@ function parseJsonItems(raw: unknown): PosSaleLineRow[] {
       quantity,
       unitPrice,
       lineTotal,
+      notes: notesFromDescription(row.description),
     };
   });
 }

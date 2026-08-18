@@ -25,6 +25,8 @@ Endpoints used:
 - `GET /menu` — products
 - `GET /sales` — orders + line items (with modifiers in `description`)
 
+Customisations (size, milk, foam, syrup, etc.) are stored on each sale line and shown under **Sales Report → Recent orders** as **Options / add-ons**.
+
 ## Alternative: direct Postgres
 
 Only needed if the HTTP API is unavailable.

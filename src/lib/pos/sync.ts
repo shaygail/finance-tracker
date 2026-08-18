@@ -10,6 +10,7 @@ import {
 } from "./client";
 import { getPosTransport, isPosConfigured } from "./config";
 import { canonicalizeProductName } from "./product-aliases";
+import type { PosSaleLineRow } from "./types";
 
 export interface PosSyncResult {
   ok: boolean;
@@ -122,7 +123,20 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       productsSync++;
     }
 
-    const posSales = await fetchPosSales(since);
+    // Older imports skipped customisation notes — one full pass when many lines lack them.
+    const [missingNotes, totalLines] = await Promise.all([
+      db.saleLine.count({
+        where: {
+          sale: { businessId },
+          OR: [{ notes: null }, { notes: "" }],
+        },
+      }),
+      db.saleLine.count({ where: { sale: { businessId } } }),
+    ]);
+    const needsNotesBackfill =
+      totalLines > 0 && missingNotes / totalLines > 0.2;
+    const salesSince = needsNotesBackfill ? undefined : since;
+    const posSales = await fetchPosSales(salesSince);
     const saleIds = posSales.map((s) => s.id);
     const posLines = await fetchPosSaleLines(saleIds);
 
@@ -177,16 +191,26 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       return { productId: created.id, displayName };
     }
 
+    const existingSales = await db.sale.findMany({
+      where: { businessId },
+      include: { lines: { orderBy: { id: "asc" } } },
+    });
+    const existingByPosId = new Map(existingSales.map((s) => [s.posSaleId, s]));
+
     let salesSync = 0;
+    let notesBackfill = 0;
+    const noteUpdates: Array<{ id: string; notes: string }> = [];
 
     for (const ps of posSales) {
-      const existing = await db.sale.findUnique({
-        where: { businessId_posSaleId: { businessId, posSaleId: ps.id } },
-      });
-      if (existing) continue;
+      const lines = linesBySale.get(ps.id) ?? [];
+      const existing = existingByPosId.get(ps.id);
+
+      if (existing) {
+        noteUpdates.push(...collectSaleLineNoteUpdates(existing.lines, lines));
+        continue;
+      }
 
       const gst = calculateGstFromInc(ps.total);
-      const lines = linesBySale.get(ps.id) ?? [];
 
       const sale = await db.sale.create({
         data: {
@@ -228,6 +252,19 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
       }
     }
 
+    for (let i = 0; i < noteUpdates.length; i += 100) {
+      const chunk = noteUpdates.slice(i, i + 100);
+      await Promise.all(
+        chunk.map((u) =>
+          db.saleLine.update({ where: { id: u.id }, data: { notes: u.notes } })
+        )
+      );
+      notesBackfill += chunk.length;
+      if (i + 100 < noteUpdates.length || chunk.length > 0) {
+        console.log(`  …refreshed add-ons on ${notesBackfill}/${noteUpdates.length} lines`);
+      }
+    }
+
     await linkSaleLinesToProducts(businessId);
     await recalculateProductStats(businessId);
 
@@ -243,16 +280,29 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
         productsSync,
         salesSync,
         status: "success",
-        message: since
-          ? `Incremental ${transport} sync since ${since.toISOString()}`
-          : `Full ${transport} sync`,
+        message: [
+          salesSince
+            ? `Incremental ${transport} sync since ${salesSince.toISOString()}`
+            : `Full ${transport} sync`,
+          notesBackfill > 0 ? `updated add-ons on ${notesBackfill} lines` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
       },
     });
 
     await syncGoalsFromSurplus(businessId);
     clearPosApiCache();
 
-    return { ok: true, productsSync, salesSync };
+    return {
+      ok: true,
+      productsSync,
+      salesSync,
+      message:
+        notesBackfill > 0
+          ? `Synced ${salesSync} new sales; refreshed add-ons on ${notesBackfill} lines`
+          : undefined,
+    };
   } catch (e) {
     clearPosApiCache();
     const error = e instanceof Error ? e.message : "Sync failed";
@@ -265,6 +315,50 @@ export async function syncFromPos(businessId: string): Promise<PosSyncResult> {
     });
     return { ok: false, productsSync: 0, salesSync: 0, error };
   }
+}
+
+/** Match POS lines onto existing DB lines; return note updates (no DB writes). */
+function collectSaleLineNoteUpdates(
+  dbLines: Array<{
+    id: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    notes: string | null;
+  }>,
+  posLines: PosSaleLineRow[]
+): Array<{ id: string; notes: string }> {
+  if (dbLines.length === 0 || posLines.length === 0) return [];
+
+  const used = new Set<number>();
+  const updates: Array<{ id: string; notes: string }> = [];
+
+  for (const dbLine of dbLines) {
+    let matchIdx = posLines.findIndex(
+      (pl, i) =>
+        !used.has(i) &&
+        canonicalizeProductName(pl.productName).trim().toLowerCase() ===
+          dbLine.productName.trim().toLowerCase() &&
+        Math.abs(pl.quantity - dbLine.quantity) < 0.001 &&
+        Math.abs(pl.unitPrice - dbLine.unitPrice) < 0.001
+    );
+    if (matchIdx < 0) {
+      matchIdx = posLines.findIndex(
+        (pl, i) =>
+          !used.has(i) &&
+          canonicalizeProductName(pl.productName).trim().toLowerCase() ===
+            dbLine.productName.trim().toLowerCase()
+      );
+    }
+    if (matchIdx < 0) continue;
+    used.add(matchIdx);
+
+    const notes = posLines[matchIdx].notes ?? null;
+    if (!notes || notes === dbLine.notes) continue;
+    updates.push({ id: dbLine.id, notes });
+  }
+
+  return updates;
 }
 
 async function linkSaleLinesToProducts(businessId: string): Promise<void> {

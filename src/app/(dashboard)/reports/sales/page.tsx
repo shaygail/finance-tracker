@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { SalesTrendChart } from "@/components/reports/sales-trend-chart";
 import { BarChart3, ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import { meaningfulSaleOptions } from "@/lib/sales/options";
 
 export default async function SalesReportPage() {
   const businessId = await getBusinessId();
@@ -23,8 +24,8 @@ export default async function SalesReportPage() {
     db.sale.findMany({
       where: { businessId },
       orderBy: { soldAt: "desc" },
-      take: 20,
-      include: { lines: true },
+      take: 40,
+      include: { lines: { orderBy: { id: "asc" } } },
     }),
   ]);
 
@@ -141,6 +142,9 @@ export default async function SalesReportPage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent orders</CardTitle>
+            <p className="text-sm font-normal text-slate-500">
+              Includes size, milk, and add-ons from the POS for each drink
+            </p>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             {recentSales.map((s) => (
@@ -156,22 +160,36 @@ export default async function SalesReportPage() {
                     {formatCurrency(s.totalAmount)}
                   </p>
                 </div>
-                <ul className="mt-2 space-y-1.5">
-                  {s.lines.map((line) => (
-                    <li key={line.id} className="text-sm">
-                      <div className="flex justify-between gap-3">
-                        <span className="text-slate-800">
-                          {line.quantity}× {line.productName}
-                        </span>
-                        <span className="shrink-0 text-slate-700">
-                          {formatCurrency(line.lineTotal)}
-                        </span>
-                      </div>
-                      {line.notes && (
-                        <p className="text-xs text-slate-500">{line.notes}</p>
-                      )}
-                    </li>
-                  ))}
+                <ul className="mt-2 space-y-2.5">
+                  {s.lines.map((line) => {
+                    const options = meaningfulSaleOptions(line.notes);
+                    return (
+                      <li key={line.id} className="text-sm">
+                        <div className="flex justify-between gap-3">
+                          <span className="font-medium text-slate-900">
+                            {line.quantity}× {line.productName}
+                          </span>
+                          <span className="shrink-0 text-slate-700">
+                            {formatCurrency(line.lineTotal)}
+                          </span>
+                        </div>
+                        {options.length > 0 ? (
+                          <div className="mt-1.5 rounded-md bg-slate-50 px-2.5 py-1.5">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                              Options / add-ons
+                            </p>
+                            <ul className="mt-0.5 space-y-0.5">
+                              {options.map((opt) => (
+                                <li key={opt} className="text-xs text-slate-700">
+                                  {opt}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
