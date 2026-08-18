@@ -1,6 +1,11 @@
 /**
  * Cup sales = drink units from POS sale lines.
  * Excludes siomai packs, individual/carton milks, sizes-only lines, and non-drink noise.
+ *
+ * Size history:
+ * - ~Mar 2026: size often sold as separate "Venti" / "Grande" lines
+ *   (Venti = Large, Grande = Regular)
+ * - From ~8 May 2026: size usually lives in item notes (`Size: Large|Regular`)
  */
 
 import { db } from "@/lib/db";
@@ -64,30 +69,70 @@ export function isCupSaleItem(productName: string, sku?: string | null): boolean
   return true;
 }
 
-/** Prefer Size from POS customisation notes; fall back to name hints. */
+/** Standalone POS size lines used before notes carried Size. */
+export function sizeFromModifierName(productName: string): DrinkSize | null {
+  const n = productName.trim().toLowerCase();
+  if (n === "venti") return "large";
+  if (n === "grande") return "regular";
+  return null;
+}
+
+function sizeLabel(size: DrinkSize): string {
+  if (size === "large") return "Large";
+  if (size === "regular") return "Regular";
+  return "Unspecified size";
+}
+
+/**
+ * Prefer Size from POS customisation notes; then name hints;
+ * optional sibling size from older Venti/Grande modifier lines.
+ */
 export function classifyDrinkSize(
   productName: string,
-  notes?: string | null
+  notes?: string | null,
+  siblingSize?: DrinkSize | null
 ): { size: DrinkSize; label: string } {
   const fromNotes = notes?.match(/\bSize:\s*(Large|Regular|Venti|Grande)\b/i);
   if (fromNotes) {
     const raw = fromNotes[1].toLowerCase();
-    if (raw === "large" || raw === "venti" || raw === "grande") {
+    if (raw === "large" || raw === "venti") {
       return { size: "large", label: "Large" };
     }
-    if (raw === "regular") {
+    if (raw === "regular" || raw === "grande") {
       return { size: "regular", label: "Regular" };
     }
   }
 
   const n = productName.toLowerCase();
-  if (/\blarge\b/.test(n) || /\bventi\b/.test(n) || /\bgrande\b/.test(n)) {
+  if (/\blarge\b/.test(n) || /\bventi\b/.test(n)) {
     return { size: "large", label: "Large" };
   }
-  if (/\bregular\b/.test(n) || /\btall\b/.test(n)) {
+  if (/\bregular\b/.test(n) || /\bgrande\b/.test(n) || /\btall\b/.test(n)) {
     return { size: "regular", label: "Regular" };
   }
-  return { size: "other", label: "Unspecified size" };
+
+  if (siblingSize === "large" || siblingSize === "regular") {
+    return { size: siblingSize, label: sizeLabel(siblingSize) };
+  }
+
+  return { size: "other", label: sizeLabel("other") };
+}
+
+/** Infer order-level size when older POS added Venti/Grande as separate lines. */
+export function siblingSizeFromSaleLines(
+  lines: Array<{ productName: string }>
+): DrinkSize | null {
+  let large = 0;
+  let regular = 0;
+  for (const line of lines) {
+    const size = sizeFromModifierName(line.productName);
+    if (size === "large") large += 1;
+    if (size === "regular") regular += 1;
+  }
+  if (large > 0 && regular === 0) return "large";
+  if (regular > 0 && large === 0) return "regular";
+  // Mixed sizes on one order — don't guess for the whole order
+  return null;
 }
 
 export function summariseCupsLines(
@@ -97,6 +142,7 @@ export function summariseCupsLines(
     lineTotal: number;
     sku?: string | null;
     notes?: string | null;
+    siblingSize?: DrinkSize | null;
   }>
 ): CupsSummary {
   const sizeMap = new Map<
@@ -112,7 +158,11 @@ export function summariseCupsLines(
     if (!isCupSaleItem(line.productName, line.sku)) continue;
     const qty = Number(line.quantity) || 0;
     const total = Number(line.lineTotal) || 0;
-    const { size, label } = classifyDrinkSize(line.productName, line.notes);
+    const { size, label } = classifyDrinkSize(
+      line.productName,
+      line.notes,
+      line.siblingSize
+    );
 
     cups += qty;
     revenue += total;
@@ -171,6 +221,7 @@ export async function getCupsSold(businessId: string): Promise<CupsSummary> {
   const lines = await db.saleLine.findMany({
     where: { sale: { businessId } },
     select: {
+      saleId: true,
       productName: true,
       quantity: true,
       lineTotal: true,
@@ -179,6 +230,18 @@ export async function getCupsSold(businessId: string): Promise<CupsSummary> {
     },
   });
 
+  const bySale = new Map<string, typeof lines>();
+  for (const line of lines) {
+    const list = bySale.get(line.saleId) ?? [];
+    list.push(line);
+    bySale.set(line.saleId, list);
+  }
+
+  const siblingBySale = new Map<string, DrinkSize | null>();
+  for (const [saleId, saleLines] of bySale) {
+    siblingBySale.set(saleId, siblingSizeFromSaleLines(saleLines));
+  }
+
   return summariseCupsLines(
     lines.map((l) => ({
       productName: l.productName,
@@ -186,6 +249,7 @@ export async function getCupsSold(businessId: string): Promise<CupsSummary> {
       lineTotal: l.lineTotal,
       notes: l.notes,
       sku: l.product?.sku ?? null,
+      siblingSize: siblingBySale.get(l.saleId) ?? null,
     }))
   );
 }
