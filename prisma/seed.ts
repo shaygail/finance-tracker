@@ -28,6 +28,7 @@ const CATEGORIES = [
   { name: "Equipment & Tools", slug: "equipment-tools", type: "expense" },
   { name: "Rental / Market fees", slug: "rental-market-fees", type: "expense" },
   { name: "Subscriptions", slug: "subscriptions", type: "expense" },
+  { name: "Personal", slug: "personal", type: "expense" },
   { name: "Sales Revenue", slug: "sales-revenue", type: "income" },
 ];
 

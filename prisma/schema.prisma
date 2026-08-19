@@ -48,6 +48,7 @@ model Business {
   trainingSignOffs    TrainingSignOff[]
   allergenItems       AllergenItem[]
   bankStatements      BankStatement[]
+  cashOutNotes        CashOutNote[]
 }
 
 model BusinessMember {
@@ -409,3 +410,21 @@ model BankStatementLine {
   @@unique([statementId, lineIndex])
   @@index([fingerprint])
 }
+
+/**
+ * Cash taken out of the till / cash sales held as cash — for the accountant only.
+ * Does NOT affect revenue, expenses, GST, or surplus (POS already has the sales).
+ */
+model CashOutNote {
+  id         String   @id @default(cuid())
+  businessId String
+  date       DateTime
+  amount     Float
+  label      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, date])
+}
+

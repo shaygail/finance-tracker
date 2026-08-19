@@ -15,6 +15,7 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
   "Equipment & Tools": "equipment-tools",
   "Rental / Market fees": "rental-market-fees",
   Subscriptions: "subscriptions",
+  Personal: "personal",
 };
 
 function resolveCategoryId(
@@ -80,7 +81,7 @@ export async function importTransactions(formData: FormData) {
       data: {
         businessId,
         categoryId,
-        date: new Date(row.date),
+        date: new Date(`${row.date}T12:00:00.000Z`),
         vendor: row.purchases,
         unitAmount: row.amount,
         quantity: row.quantity,

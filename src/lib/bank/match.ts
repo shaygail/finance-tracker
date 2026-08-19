@@ -147,29 +147,10 @@ export function suggestBankLineMatch(
   const desc = line.description.toLowerCase();
 
   if (line.deposit != null && line.deposit > 0) {
-    if (/fastpay|eftpos nz/i.test(desc) || (line.txnType === "EP" && /46902300/.test(desc))) {
-      return {
-        action: "skip_income",
-        matchNote: "Card batch / EFTPOS settlement — already in POS sales",
-        matchedTransactionId: null,
-        suggestedCategoryName: null,
-        paymentMode,
-        vendor,
-      };
-    }
-    if (/uber bv|uber:/i.test(desc)) {
-      return {
-        action: "skip_income",
-        matchNote: "Uber Eats payout — already in POS (Uber channel)",
-        matchedTransactionId: null,
-        suggestedCategoryName: null,
-        paymentMode,
-        vendor,
-      };
-    }
     return {
       action: "skip_income",
-      matchNote: "Incoming payment — treat as POS/sales income, not an expense",
+      matchNote:
+        "Money in — sales come from POS only (statements are for deductions)",
       matchedTransactionId: null,
       suggestedCategoryName: null,
       paymentMode,
@@ -188,7 +169,18 @@ export function suggestBankLineMatch(
     };
   }
 
-  if (/western unio|temu\.com|mcdonald|kfc |escape coffe|railway \(usd/i.test(desc)) {
+  if (/vending\s*dire|mcdonald|kfc |western\s*unio/i.test(desc)) {
+    return {
+      action: "new_expense",
+      matchNote: "Personal drawings — owner money out (not a business cost)",
+      matchedTransactionId: null,
+      suggestedCategoryName: "Personal",
+      paymentMode,
+      vendor,
+    };
+  }
+
+  if (/temu\.com|escape coffe/i.test(desc)) {
     return {
       action: "review",
       matchNote: "Possible personal / non-trading spend — confirm before importing",

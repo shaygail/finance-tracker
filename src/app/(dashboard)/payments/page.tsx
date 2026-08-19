@@ -9,17 +9,26 @@ import {
 } from "@/components/dashboard/charts";
 import { CashTakingForm } from "@/components/payments/cash-taking-form";
 import { DeleteCashTakingButton } from "@/components/payments/delete-cash-taking-button";
-import { Banknote, CreditCard } from "lucide-react";
+import {
+  CashOutNoteForm,
+  DeleteCashOutNoteButton,
+} from "@/components/payments/cash-out-note-form";
+import { Banknote, ClipboardList, CreditCard } from "lucide-react";
 
 export default async function PaymentsPage() {
   const businessId = await getBusinessId();
 
-  const [payments, cashEntries] = await Promise.all([
+  const [payments, cashEntries, cashOutNotes] = await Promise.all([
     getSalesByPaymentMethod(businessId),
     db.sale.findMany({
       where: { businessId, source: "cash_manual" },
       orderBy: { soldAt: "desc" },
       take: 30,
+    }),
+    db.cashOutNote.findMany({
+      where: { businessId },
+      orderBy: { date: "desc" },
+      take: 50,
     }),
   ]);
 
@@ -30,14 +39,15 @@ export default async function PaymentsPage() {
   }));
 
   const cashRow = payments.byMethod.find((m) => m.bucket === "cash");
+  const cashOutTotal = cashOutNotes.reduce((s, n) => s + n.amount, 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Payments</h1>
         <p className="text-slate-500">
-          How customers pay — bank transfer, cash, EFTPOS, Visa/Mastercard — and
-          manual cash you count yourself
+          How customers pay — from POS sync. Cash rung up in the POS already counts
+          in revenue; do not enter it again here.
         </p>
       </div>
 
@@ -74,7 +84,7 @@ export default async function PaymentsPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-slate-500">Cash (POS + manual)</p>
+            <p className="text-sm text-slate-500">Cash (from POS)</p>
             <p className="text-2xl font-bold text-slate-900">
               {formatCurrency(cashRow?.revenue ?? 0)}
             </p>
@@ -158,12 +168,55 @@ export default async function PaymentsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-amber-700" />
-            Add cash taking
+            <ClipboardList className="h-5 w-5 text-slate-700" />
+            Cash outs (accountant file)
           </CardTitle>
           <p className="text-sm font-normal text-slate-500">
-            Use this when cash isn’t fully in the POS (counted till, market days).
-            Amounts are added as Cash sales and show in the charts above.
+            Log cash taken out or held from sales that are <span className="font-medium text-slate-700">already in POS</span>.
+            This is a note for the accountant only — it does not change revenue or expenses.
+          </p>
+          {cashOutNotes.length > 0 && (
+            <p className="text-sm text-slate-600">
+              Listed total: {formatCurrency(cashOutTotal)}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <CashOutNoteForm />
+          {cashOutNotes.length > 0 && (
+            <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
+              {cashOutNotes.map((n) => (
+                <li
+                  key={n.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {formatCurrency(n.amount)} · {formatDate(n.date)}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {n.label || "Cash out"}
+                      {n.notes ? ` — ${n.notes}` : ""}
+                    </p>
+                  </div>
+                  <DeleteCashOutNoteButton id={n.id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-amber-700" />
+            Cash not in POS (rare)
+          </CardTitle>
+          <p className="text-sm font-normal text-slate-500">
+            Only use this if cash sales were <span className="font-medium text-slate-700">never rung up in the POS</span>.
+            Cash that is already in POS must not be added here — that would double-count revenue.
+            Prefer <span className="font-medium text-slate-700">Cash outs</span> above for till cash already in POS.
           </p>
         </CardHeader>
         <CardContent>

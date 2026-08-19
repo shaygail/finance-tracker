@@ -10,6 +10,7 @@ import {
 import { getSalesByPaymentMethod } from "@/lib/sales/payments";
 import { getRentalMarketFeesSummary } from "@/lib/fees/rental-market";
 import { getSubscriptionsSummary } from "@/lib/fees/subscriptions";
+import { getFyProfitSummary } from "@/lib/profit/fy";
 import {
   getCurrentFinancialYearRange,
   getPeriodForDate,
@@ -26,6 +27,7 @@ import {
 } from "@/components/dashboard/charts";
 import {
   AlertTriangle,
+  Banknote,
   Coffee,
   CreditCard,
   Download,
@@ -59,6 +61,7 @@ export default async function DashboardPage() {
     payments,
     marketFees,
     subscriptions,
+    fyProfit,
   ] = await Promise.all([
     db.transaction.findMany({
       where: { businessId },
@@ -83,14 +86,23 @@ export default async function DashboardPage() {
     getSalesByPaymentMethod(businessId),
     getRentalMarketFeesSummary(businessId),
     getSubscriptionsSummary(businessId),
+    getFyProfitSummary(businessId),
   ]);
 
-  const totalExpenses = transactions
+  const businessTx = transactions.filter(
+    (t) => t.category?.slug !== "personal"
+  );
+  const personalTx = transactions.filter(
+    (t) => t.category?.slug === "personal"
+  );
+  const personalDrawings = personalTx.reduce((sum, t) => sum + t.totalAmount, 0);
+
+  const totalExpenses = businessTx
     .filter((t) => t.type === "expense" || t.type === "refund")
     .reduce((sum, t) => sum + t.totalAmount, 0);
 
   const frequency = (business?.gstFilingFrequency ?? "two_monthly") as GstFilingFrequency;
-  const fyTransactions = transactions.filter((t) => t.date >= start && t.date <= end);
+  const fyTransactions = businessTx.filter((t) => t.date >= start && t.date <= end);
   const gstPeriodRows = [
     ...fyTransactions.map((t) => ({
       date: t.date,
@@ -113,7 +125,7 @@ export default async function DashboardPage() {
         .reduce((s, t) => s + t.gstAmount, 0)
   );
 
-  const expenseByCategory = transactions
+  const expenseByCategory = businessTx
     .filter((t) => (t.type === "expense" || t.type === "refund") && t.category)
     .reduce(
       (acc, t) => {
@@ -146,6 +158,59 @@ export default async function DashboardPage() {
         {saleCount > 0 && (
           <Badge variant="success">{saleCount} POS orders synced</Badge>
         )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Link href="/reports/profit" className="block">
+          <Card className="h-full border-emerald-200 transition-colors hover:border-emerald-400">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-lg bg-emerald-100 p-3">
+                  <Scale className="h-6 w-6 text-emerald-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-emerald-800">
+                    FY {fyProfit.fyLabel} filing profit (no cash)
+                  </p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {formatCurrency(fyProfit.profitIncGst)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Non-cash POS − expenses
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm font-medium text-emerald-700">
+                Open →
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/reports/profit" className="block">
+          <Card className="h-full border-amber-200 transition-colors hover:border-amber-400">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-lg bg-amber-100 p-3">
+                  <Banknote className="h-6 w-6 text-amber-700" />
+                </div>
+                <div>
+                  <p className="text-sm text-amber-900">
+                    FY {fyProfit.fyLabel} full profit (with POS cash)
+                  </p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {formatCurrency(fyProfit.profitWithCashIncGst)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Includes POS cash {formatCurrency(fyProfit.cashInPos)}
+                  </p>
+                </div>
+              </div>
+              <span className="text-sm font-medium text-amber-800">
+                Open →
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -205,6 +270,12 @@ export default async function DashboardPage() {
               <p className="text-xl font-bold text-slate-900">
                 {formatCurrency(totalExpenses)}
               </p>
+              {personalDrawings > 0 && (
+                <p className="text-xs text-slate-400">
+                  Personal drawings {formatCurrency(personalDrawings)} (not in
+                  business costs)
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

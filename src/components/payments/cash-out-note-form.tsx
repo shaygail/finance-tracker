@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { addCashTaking } from "@/app/(dashboard)/payments/actions";
+import {
+  addCashOutNote,
+  deleteCashOutNote,
+} from "@/app/(dashboard)/payments/cash-out-actions";
 
 function todayInputValue() {
   const d = new Date();
@@ -13,7 +16,7 @@ function todayInputValue() {
   return `${y}-${m}-${day}`;
 }
 
-export function CashTakingForm() {
+export function CashOutNoteForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -25,12 +28,12 @@ export function CashTakingForm() {
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const result = await addCashTaking(formData);
+      const result = await addCashOutNote(formData);
       if (result.error) {
         setError(result.error);
         return;
       }
-      setSuccess("Cash taking saved");
+      setSuccess("Cash out recorded for the accountant");
       form.reset();
       const dateInput = form.elements.namedItem("date") as HTMLInputElement | null;
       if (dateInput) dateInput.value = todayInputValue();
@@ -41,9 +44,9 @@ export function CashTakingForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="cashout-date">Date</Label>
           <Input
-            id="date"
+            id="cashout-date"
             name="date"
             type="date"
             required
@@ -51,9 +54,9 @@ export function CashTakingForm() {
           />
         </div>
         <div>
-          <Label htmlFor="amount">Cash amount (inc GST)</Label>
+          <Label htmlFor="cashout-amount">Cash out amount</Label>
           <Input
-            id="amount"
+            id="cashout-amount"
             name="amount"
             type="number"
             step="0.01"
@@ -64,26 +67,47 @@ export function CashTakingForm() {
         </div>
       </div>
       <div>
-        <Label htmlFor="label">Label (optional)</Label>
+        <Label htmlFor="cashout-label">What (optional)</Label>
         <Input
-          id="label"
+          id="cashout-label"
           name="label"
-          placeholder="e.g. Saturday stall float count"
+          placeholder="e.g. Siomai & chilli oil cash"
         />
       </div>
       <div>
-        <Label htmlFor="notes">Notes (optional)</Label>
+        <Label htmlFor="cashout-notes">Notes for accountant (optional)</Label>
         <Input
-          id="notes"
+          id="cashout-notes"
           name="notes"
-          placeholder="e.g. counted till after market"
+          placeholder="e.g. Already in POS — cash held / taken out"
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-emerald-600">{success}</p>}
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Add cash not in POS"}
+        {pending ? "Saving…" : "Record cash out"}
       </Button>
     </form>
+  );
+}
+
+export function DeleteCashOutNoteButton({ id }: { id: string }) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      disabled={pending}
+      onClick={() => {
+        if (!confirm("Delete this cash-out note?")) return;
+        startTransition(async () => {
+          await deleteCashOutNote(id);
+        });
+      }}
+    >
+      {pending ? "…" : "Delete"}
+    </Button>
   );
 }

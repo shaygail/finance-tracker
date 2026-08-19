@@ -58,15 +58,32 @@ export function parseNumber(value: unknown): number {
   return 0;
 }
 
+/** Format calendar Y-M-D without UTC timezone shift. */
+function toDateKey(year: number, month: number, day: number): string | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+    return null;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Costing purchase CSVs use MM/DD/YYYY.
+ * Unambiguous cases still win: 20/02 → 20 Feb, 2/27 → 27 Feb.
+ */
 export function parseDate(value: unknown): string | null {
   if (value instanceof Date) {
-    return value.toISOString().split("T")[0];
+    return toDateKey(
+      value.getFullYear(),
+      value.getMonth() + 1,
+      value.getDate()
+    );
   }
   if (typeof value === "number") {
     const date = XLSX.SSF.parse_date_code(value);
     if (date) {
-      const d = new Date(date.y, date.m - 1, date.d);
-      return d.toISOString().split("T")[0];
+      return toDateKey(date.y, date.m, date.d);
     }
   }
   if (typeof value !== "string") return null;
@@ -85,24 +102,25 @@ export function parseDate(value: unknown): string | null {
     let month: number;
 
     if (part1 > 12) {
+      // Must be DD/MM (e.g. 20/02/2026)
       day = part1;
       month = part2;
     } else if (part2 > 12) {
+      // Must be MM/DD (e.g. 2/27/2026)
       month = part1;
       day = part2;
     } else {
-      day = part1;
-      month = part2;
+      // Ambiguous — costing CSV uses MM/DD
+      month = part1;
+      day = part2;
     }
 
-    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-    const d = new Date(year, month - 1, day);
-    return d.toISOString().split("T")[0];
+    return toDateKey(year, month, day);
   }
 
   const d = new Date(trimmed);
   if (!isNaN(d.getTime())) {
-    return d.toISOString().split("T")[0];
+    return toDateKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
   }
 
   return null;

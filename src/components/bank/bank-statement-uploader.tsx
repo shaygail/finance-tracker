@@ -146,8 +146,8 @@ export function BankStatementUploader() {
         <CardContent className="space-y-4">
           <p className="text-sm text-slate-500">
             Upload an ANZ <strong>PDF</strong> statement or <strong>CSV</strong> export.
-            Incoming sales settlements are skipped; withdrawals can become expenses or
-            link to ones you already entered. Afterpay instalments are skipped.
+            We only use <strong>deductions</strong> (money out). Sales always come from
+            POS — deposits are skipped. Afterpay instalments are skipped.
           </p>
           <input
             type="file"

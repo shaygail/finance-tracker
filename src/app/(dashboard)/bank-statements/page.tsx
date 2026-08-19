@@ -25,8 +25,8 @@ export default async function BankStatementsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Bank statements</h1>
         <p className="text-slate-500">
-          Import ANZ statements and match withdrawals to expenses (separate from
-          Excel costing import)
+          Import ANZ statements for <span className="font-medium text-slate-700">deductions only</span>
+          {" "}(expenses / money out). Sales revenue always comes from POS — deposits are skipped.
         </p>
       </div>
 

@@ -22,6 +22,7 @@ const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
   "Equipment & Tools": "equipment-tools",
   "Rental / Market fees": "rental-market-fees",
   Subscriptions: "subscriptions",
+  Personal: "personal",
 };
 
 export type BankPreviewLine = {

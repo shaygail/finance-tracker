@@ -12,7 +12,7 @@ function parseDateInput(raw: string): Date | null {
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
 }
 
-/** Manual cash takings that aren't fully captured in POS. */
+/** Manual cash only when it was never rung up in POS (do not use for POS cash). */
 export async function addCashTaking(formData: FormData) {
   const businessId = await getBusinessId();
   const dateRaw = String(formData.get("date") ?? "");

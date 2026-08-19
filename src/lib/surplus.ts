@@ -5,7 +5,14 @@ import { getTotalRevenue } from "@/lib/revenue";
 export async function getBusinessSurplus(businessId: string): Promise<number> {
   const [transactions, totalRevenue] = await Promise.all([
     db.transaction.findMany({
-      where: { businessId, type: { in: ["expense", "refund"] } },
+      where: {
+        businessId,
+        type: { in: ["expense", "refund"] },
+        OR: [
+          { category: null },
+          { category: { slug: { not: "personal" } } },
+        ],
+      },
     }),
     getTotalRevenue(businessId),
   ]);

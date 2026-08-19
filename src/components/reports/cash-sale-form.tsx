@@ -54,7 +54,7 @@ export function CashSaleForm() {
       </div>
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Add cash sale"}
+          {pending ? "Saving…" : "Add cash not in POS"}
         </Button>
       </div>
     </form>

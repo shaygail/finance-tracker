@@ -179,8 +179,7 @@ export default async function GstReportPage() {
               </span>
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Cash not entered here is not included in tax — add only the cash totals you want
-              tracked.
+              Cash already in POS is included automatically — do not enter it again.
             </p>
           </div>
         </CardContent>
@@ -236,13 +235,16 @@ export default async function GstReportPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-emerald-600" />
-            Add cash sale (optional)
+            Add cash not in POS (optional)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-sm text-slate-500">
-            POS card/EFTPOS sales are already included from sync. Add only the cash takings you
-            want in the GST calculation — you do not need to enter every cash sale.
+            POS already includes cash sales when they were rung up there (card and cash).
+            <span className="font-medium text-slate-700">
+              {" "}Do not add cash that is already in POS
+            </span>
+            {" "}— that double-counts revenue. Use this only for cash never entered in the till.
           </p>
           <CashSaleForm />
 
